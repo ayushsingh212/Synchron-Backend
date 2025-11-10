@@ -41,13 +41,6 @@ services:
       - /app/node_modules       
     command: npm start            
     restart: always
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-
   mongodb:
     image: mongo:6
     container_name: finalscheduler-mongo
