@@ -6,7 +6,7 @@ import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import path from "path";
 import fs from "fs"
 import { SectionTimetable } from "../models/sectionTimetable.model.js";
-const FLASK_URL = "http://127.0.0.1:5000";
+const FLASK_URL = process.env.NODE_URL;
 import FormData from "form-data";
 import { OrganisationData } from "../models/organisationData.model.js";
 

@@ -8,9 +8,9 @@ const timeslotSchema = new Schema(
       ref: 'Organisation',
       required: true
     },
-    day: { type: Number, required: true }, // 0..6 (Mon..Sun) - use 0..4 for Mon-Fri
-    startTime: { type: String, required: true }, // "09:00"
-    endTime: { type: String, required: true }   // "10:00"
+    day: { type: Number, required: true }, 
+    startTime: { type: String, required: true }, 
+    endTime: { type: String, required: true } 
   },
   { timestamps: true }
 );

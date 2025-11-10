@@ -1,6 +1,6 @@
 import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import { OrganisationData } from "../models/organisationData.model.js";
-import { SectionTimetable } from "../models/sectionTimeTable.model.js";
+import { SectionTimetable } from "../models/sectionTimetable.model.js";
 
 
 // Save new timetable
