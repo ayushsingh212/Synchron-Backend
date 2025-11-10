@@ -44,7 +44,7 @@ jobs:
 
             if [ ! -d "Synchron" ]; then
               echo " Cloning repo for the first time..."
-              git clone git@github.com:ayushsingh211/Synchron.git
+              git clone git@github.com:ayushsingh212/Synchron-Backend.git
             else
               echo " Repo exists, pulling latest changes..."
               cd Synchron
