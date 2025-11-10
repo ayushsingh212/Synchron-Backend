@@ -36,17 +36,22 @@ jobs:
             eval $(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
             git config --global user.name "EC2 Deployer"
-            git config --global user.email "ec2-deploy@synchron.com" 
+            git config --global user.email "ec2-deploy@synchron.com"
+
+            #  Trust GitHub SSH host (fixes Host key verification failed)
+            mkdir -p ~/.ssh
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
             if [ ! -d "Synchron" ]; then
               echo " Cloning repo for the first time..."
               git clone git@github.com:ayushsingh211/Synchron.git
+            else
+              echo " Repo exists, pulling latest changes..."
+              cd Synchron
+              git pull origin master
             fi
 
-            cd Synchron
-            echo " Pulling latest changes..."
-            git pull origin master
-
+            cd /home/ubuntu/Synchron
             echo " Rebuilding Docker containers..."
             docker-compose down
             docker-compose up -d --build
