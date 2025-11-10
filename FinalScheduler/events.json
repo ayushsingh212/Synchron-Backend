@@ -1,0 +1,146 @@
+{
+  "events": [
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F001",
+      "start_day": "Monday",
+      "end_day": "Wednesday",
+      "timeslots": null,
+      "preferences": {
+        "mode": "same_substitute_per_section"
+      },
+      "note": "F001 = Dr. Yogendra Prajapati (CSE) - full-day absence Mon→Wed"
+    },
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F014",
+      "start_day": "Thursday",
+      "end_day": "Thursday",
+      "timeslots": [1, 2, 4],
+      "preferences": {
+        "mode": "distribute_substitute_load"
+      },
+      "note": "F014 = Dr. Jaishree Jain (CSE AIML) - absent only P1, P2, P4 on Thu"
+    },
+    {
+      "type": "faculty_partial_absence",
+      "faculty_id": "F006",
+      "date": "Tuesday",
+      "timeslots": [2, 3],
+      "preferences": {
+        "prefer_shift": true
+      },
+      "note": "F006 = Ms. Dhanshri Parihar (CSE) - partial absence Tuesday P3-P4"
+    },
+    {
+      "type": "faculty_partial_absence",
+      "faculty_id": "F032",
+      "date": "Friday",
+      "timeslots": [5],
+      "preferences": {
+        "prefer_shift": false
+      },
+      "note": "F032 = Dr. Amit Kumar (ECE) - away Friday P5, do not shift — use substitute"
+    },
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F041",
+      "start_day": "Monday",
+      "end_day": "Monday",
+      "timeslots": [1, 2, 3, 4, 5],
+      "preferences": {
+        "mode": "cancel_if_no_substitute"
+      },
+      "note": "F041 = Prof. Rakesh Jain (ME) - full-day leave Monday, cancel class if no faculty available"
+    },
+    {
+      "type": "resource_unavailable",
+      "room_id": "Lab-3",
+      "start_day": "Wednesday",
+      "end_day": "Thursday",
+      "timeslots": [1, 2, 3],
+      "reason": "maintenance",
+      "note": "Lab-3 closed Wed & Thu for maintenance, relocate labs to Lab-4/Lab-5"
+    },
+    {
+      "type": "resource_unavailable",
+      "room_id": "CL-04",
+      "start_day": "Friday",
+      "end_day": "Friday",
+      "timeslots": [1, 2],
+      "reason": "projector_broken",
+      "note": "CL-04 projector broken, shift to another classroom"
+    },
+    {
+      "type": "resource_unavailable",
+      "room_id": "EC-201",
+      "start_day": "Tuesday",
+      "end_day": "Tuesday",
+      "timeslots": [4, 5, 7],
+      "reason": "deep_cleaning",
+      "note": "EC-201 not usable Tue P4-P5-P7"
+    },
+    {
+      "type": "faculty_partial_absence",
+      "faculty_id": "F018",
+      "date": "Wednesday",
+      "timeslots": [1],
+      "preferences": {
+        "prefer_shift": true
+      },
+      "note": "F018 = Mr. Vivek Agarwal (CSE DS) - only P1 off, try shifting to later slot same day"
+    },
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F050",
+      "start_day": "Thursday",
+      "end_day": "Friday",
+      "timeslots": null,
+      "preferences": {
+        "mode": "same_substitute_per_section"
+      },
+      "note": "F050 = Dr. Vikash Singh (CE) - on leave Thu-Fri full day"
+    },
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F019",
+      "start_day": "Friday",
+      "end_day": "Friday",
+      "timeslots": [7, 8, 9],
+      "preferences": {
+        "mode": "reschedule_to_next_day"
+      },
+      "note": "F019 = Mr. Bhupesh Gupta (CSE) - on leave Fri afternoon, try pushing lectures to Monday"
+    },
+    {
+      "type": "resource_unavailable",
+      "room_id": "ME-101",
+      "start_day": "Monday",
+      "end_day": "Monday",
+      "timeslots": [2],
+      "reason": "furniture_repair",
+      "note": "ME-101 not available Monday P2, shift lecture to ME-102"
+    },
+    {
+      "type": "faculty_partial_absence",
+      "faculty_id": "F033",
+      "date": "Monday",
+      "timeslots": [8],
+      "preferences": {
+        "prefer_shift": false
+      },
+      "note": "F033 = Ms. Kavita Verma (ECE) - not available Monday last period, must substitute"
+    },
+    {
+      "type": "faculty_absence",
+      "faculty_id": "F021",
+      "start_day": "Tuesday",
+      "end_day": "Wednesday",
+      "timeslots": null,
+      "preferences": {
+        "mode": "merge_with_parallel_batches"
+      },
+      "note": "F021 = Dr. Neha Singh (CSE) - absent Tue-Wed; merge project batches if possible"
+    }
+  ]
+}

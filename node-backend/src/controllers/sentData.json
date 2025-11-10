@@ -1,0 +1,3234 @@
+{
+    "success": true,
+    "statusCode": 200,
+    "message": "Timetable generation started",
+    "data": {
+        "college_info": {
+            "effective_date": "2025-09-15T00:00:00.000Z",
+            "name": "SCHOOL OF COMPUTER ENGINEERING, MIT MANIPAL",
+            "session": "2025-26"
+        },
+        "time_slots": {
+            "break_periods": [
+                3,
+                9
+            ],
+            "lunch_period": 6,
+            "mentorship_period": null,
+            "periods": [
+                {
+                    "id": 1,
+                    "start_time": "08:00",
+                    "end_time": "09:00",
+                    "_id": "68c98579c311fbcbb3e1c829"
+                },
+                {
+                    "id": 2,
+                    "start_time": "09:00",
+                    "end_time": "10:00",
+                    "_id": "68c98579c311fbcbb3e1c82a"
+                },
+                {
+                    "id": 3,
+                    "start_time": "10:00",
+                    "end_time": "10:30",
+                    "_id": "68c98579c311fbcbb3e1c82b"
+                },
+                {
+                    "id": 4,
+                    "start_time": "10:30",
+                    "end_time": "11:30",
+                    "_id": "68c98579c311fbcbb3e1c82c"
+                },
+                {
+                    "id": 5,
+                    "start_time": "11:30",
+                    "end_time": "12:30",
+                    "_id": "68c98579c311fbcbb3e1c82d"
+                },
+                {
+                    "id": 6,
+                    "start_time": "12:30",
+                    "end_time": "13:00",
+                    "_id": "68c98579c311fbcbb3e1c82e"
+                },
+                {
+                    "id": 7,
+                    "start_time": "13:00",
+                    "end_time": "14:00",
+                    "_id": "68c98579c311fbcbb3e1c82f"
+                },
+                {
+                    "id": 8,
+                    "start_time": "14:00",
+                    "end_time": "15:00",
+                    "_id": "68c98579c311fbcbb3e1c830"
+                },
+                {
+                    "id": 9,
+                    "start_time": "15:00",
+                    "end_time": "15:30",
+                    "_id": "68c98579c311fbcbb3e1c831"
+                },
+                {
+                    "id": 10,
+                    "start_time": "15:30",
+                    "end_time": "16:30",
+                    "_id": "68c98579c311fbcbb3e1c832"
+                }
+            ],
+            "working_days": [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday"
+            ]
+        },
+        "constraints": {
+            "hard_constraints": {
+                "break_periods_fixed": [
+                    3,
+                    9
+                ],
+                "lab_duration_consecutive": true,
+                "lunch_period_fixed": 6,
+                "max_classes_per_day_per_section": 7,
+                "no_faculty_clash": true,
+                "no_room_clash": true,
+                "no_section_clash": true
+            },
+            "soft_constraints": {
+                "balanced_daily_load": {
+                    "max_deviation": 2,
+                    "weight": 0.3
+                },
+                "faculty_preference_slots": {
+                    "weight": 0.2
+                },
+                "minimize_faculty_travel": {
+                    "weight": 0.15
+                }
+            }
+        },
+        "__v": 0,
+        "createdAt": "2025-09-15T21:17:45.178Z",
+        "departments": [
+            {
+                "dept_id": "AIML",
+                "name": "Artificial Intelligence and Machine Learning",
+                "sections": [
+                    {
+                        "section_id": "AIML_3_A",
+                        "name": "AIML-3A",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_503",
+                        "student_count": 60,
+                        "coordinator": "HOD AIML",
+                        "_id": "68c98579c311fbcbb3e1c834"
+                    },
+                    {
+                        "section_id": "AIML_3_B",
+                        "name": "AIML-3B",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_507",
+                        "student_count": 60,
+                        "coordinator": "HOD AIML",
+                        "_id": "68c98579c311fbcbb3e1c835"
+                    },
+                    {
+                        "section_id": "AIML_3_C",
+                        "name": "AIML-3C",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_409",
+                        "student_count": 60,
+                        "coordinator": "HOD AIML",
+                        "_id": "68c98579c311fbcbb3e1c836"
+                    }
+                ],
+                "_id": "68c98579c311fbcbb3e1c833"
+            },
+            {
+                "dept_id": "CCE",
+                "name": "Computer and Communication Engineering",
+                "sections": [
+                    {
+                        "section_id": "CCE_3_A",
+                        "name": "CCE-3A",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_504",
+                        "student_count": 60,
+                        "coordinator": "HOD CCE",
+                        "_id": "68c98579c311fbcbb3e1c838"
+                    },
+                    {
+                        "section_id": "CCE_3_B",
+                        "name": "CCE-3B",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_506",
+                        "student_count": 60,
+                        "coordinator": "HOD CCE",
+                        "_id": "68c98579c311fbcbb3e1c839"
+                    },
+                    {
+                        "section_id": "CCE_3_C",
+                        "name": "CCE-3C",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_317",
+                        "student_count": 60,
+                        "coordinator": "HOD CCE",
+                        "_id": "68c98579c311fbcbb3e1c83a"
+                    },
+                    {
+                        "section_id": "CCE_3_D",
+                        "name": "CCE-3D",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_408",
+                        "student_count": 60,
+                        "coordinator": "HOD CCE",
+                        "_id": "68c98579c311fbcbb3e1c83b"
+                    }
+                ],
+                "_id": "68c98579c311fbcbb3e1c837"
+            },
+            {
+                "dept_id": "CSE",
+                "name": "Computer Science Engineering",
+                "sections": [
+                    {
+                        "section_id": "CSE_3_A",
+                        "name": "CSE-3A",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_411",
+                        "student_count": 60,
+                        "coordinator": "HOD CSE",
+                        "_id": "68c98579c311fbcbb3e1c83d"
+                    },
+                    {
+                        "section_id": "CSE_3_B",
+                        "name": "CSE-3B",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_408",
+                        "student_count": 60,
+                        "coordinator": "HOD CSE",
+                        "_id": "68c98579c311fbcbb3e1c83e"
+                    },
+                    {
+                        "section_id": "CSE_3_C",
+                        "name": "CSE-3C",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_316",
+                        "student_count": 60,
+                        "coordinator": "HOD CSE",
+                        "_id": "68c98579c311fbcbb3e1c83f"
+                    },
+                    {
+                        "section_id": "CSE_3_D",
+                        "name": "CSE-3D",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_318",
+                        "student_count": 60,
+                        "coordinator": "HOD CSE",
+                        "_id": "68c98579c311fbcbb3e1c840"
+                    }
+                ],
+                "_id": "68c98579c311fbcbb3e1c83c"
+            },
+            {
+                "dept_id": "DSE",
+                "name": "Data Science Engineering",
+                "sections": [
+                    {
+                        "section_id": "DSE_3_A",
+                        "name": "DSE-3A",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_410",
+                        "student_count": 60,
+                        "coordinator": "HOD DSE",
+                        "_id": "68c98579c311fbcbb3e1c842"
+                    },
+                    {
+                        "section_id": "DSE_3_B",
+                        "name": "DSE-3B",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_502",
+                        "student_count": 60,
+                        "coordinator": "HOD DSE",
+                        "_id": "68c98579c311fbcbb3e1c843"
+                    },
+                    {
+                        "section_id": "DSE_3_C",
+                        "name": "DSE-3C",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_409",
+                        "student_count": 60,
+                        "coordinator": "HOD DSE",
+                        "_id": "68c98579c311fbcbb3e1c844"
+                    }
+                ],
+                "_id": "68c98579c311fbcbb3e1c841"
+            },
+            {
+                "dept_id": "IT",
+                "name": "Information Technology",
+                "sections": [
+                    {
+                        "section_id": "IT_3_A",
+                        "name": "IT-3A",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_410",
+                        "student_count": 60,
+                        "coordinator": "HOD IT",
+                        "_id": "68c98579c311fbcbb3e1c846"
+                    },
+                    {
+                        "section_id": "IT_3_B",
+                        "name": "IT-3B",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_502",
+                        "student_count": 60,
+                        "coordinator": "HOD IT",
+                        "_id": "68c98579c311fbcbb3e1c847"
+                    },
+                    {
+                        "section_id": "IT_3_C",
+                        "name": "IT-3C",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_411",
+                        "student_count": 60,
+                        "coordinator": "HOD IT",
+                        "_id": "68c98579c311fbcbb3e1c848"
+                    },
+                    {
+                        "section_id": "IT_3_D",
+                        "name": "IT-3D",
+                        "semester": "3",
+                        "year": "2",
+                        "room": "AB5_315",
+                        "student_count": 60,
+                        "coordinator": "HOD IT",
+                        "_id": "68c98579c311fbcbb3e1c849"
+                    }
+                ],
+                "_id": "68c98579c311fbcbb3e1c845"
+            }
+        ],
+        "faculty": [
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F001",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SUJATHA H S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F002",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mrs Ramya D Shetty",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F003",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Prajna Parimita Pradhan",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F004",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr D Cenitta",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F005",
+                "labs": [
+                    "CSS2111",
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Vinayak G Pai",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F006",
+                "labs": [
+                    "CSS2111",
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Pavithra KC",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F007",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr R Vijaya Arjunan",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F008",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Sudina Kumar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F009",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Manjunatha",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F010",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr DEVADAS NAYAK",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F011",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Divya S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F012",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Ms Roopashri Shetty",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F013",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr G Deepa",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F014",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Venkatesh Bhandage",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F015",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Clotilda Maria Mathais",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F016",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Rani Ooman Panicker",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F017",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Ranjith K",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F018",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SAYINATH UDUPA",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F019",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Siva Kumar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F020",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Satyajit Mahapatra",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F021",
+                "labs": [
+                    "CSS2111",
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Shavantrevva Sangappa Bilakeri",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F022",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Adarsh Rag S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F023",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Ujjwal",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F024",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Arpan Mandal",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F025",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Siva Selvan",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F026",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Harsh Nagar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F027",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr KAVITHA KOPPULA",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F028",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Shiva Prasad",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F029",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Krishna Prakash",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F030",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Shanthi PB",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F031",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Subrajit Barick",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F032",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Harish S V",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F033",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Ganesh Babu",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F034",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Pradeep reddy",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F035",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr RAKSHITH B R",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F036",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Anita Kini",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F037",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Archana Praveen Kumar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F038",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Ahamed Shafeeq BM",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F039",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Jayashree",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F040",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Snehal Samanth",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F041",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SHAHISTHA",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F042",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Rajashree Krishna",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F043",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Soumya Nandana",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F044",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Jayashree Hegde",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F045",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr DIVYA P SHENOY",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F046",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Kaliraj S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F047",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Raghavendra Achar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F048",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Usha Kiran",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F049",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Anup Bhat",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F050",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Sameena",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F051",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Shanmukharaja",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F052",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Musica Supriya",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F053",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr ARGHA GHOSH",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F054",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mrs Linda Varghese",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F055",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Vidya Rao",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F056",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Deepika N S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F057",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Mitra",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F058",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Mohammed Rizwan Shaik",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "IT",
+                "designation": "Assistant Professor",
+                "faculty_id": "F059",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Hemalatha",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F060",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SOUMYA K V",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F061",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Mr Manoj R",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F062",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Manjula C Belagavi",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F063",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Pankaj Kumar",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F064",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Joies Mary D Souza",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F065",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr AISHWARYA S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F066",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Raghavendra S",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F067",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Sandhyalaxmi",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F068",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Vidya Kamath",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F069",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Vibha",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F070",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SHRINATH HADIMANI",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F071",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mrs Gangothri",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F072",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Chetana Pujari",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F073",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Upadrasta Shivani Sri Varshini",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F074",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SACHIN M NAIK",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F075",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Mr Ghanashyama Prabhu",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F076",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr Shwetha Rai",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "CCE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F077",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Radhika Kamath",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F078",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr VIDYA H C",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F079",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Anoop BN",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F080",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Diana Olivia",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F081",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Raghuram Holla",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F082",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Avik Bose",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2104"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F083",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr SMITHA GANESH BHAT",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F084",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Ms Jimcymol James",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F085",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr VINAY MADHUSUDANAN",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F086",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Archana H",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "AIML",
+                "designation": "Assistant Professor",
+                "faculty_id": "F087",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Mr Mayur",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F088",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr K LAKSHMI DEVI",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F089",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Krishnaraj Chadaga",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2103"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F090",
+                "labs": [
+                    "CSS2111"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Saraswati Koppad",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": []
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F091",
+                "labs": [
+                    "CSS2112"
+                ],
+                "max_hours_per_week": 20,
+                "name": "Dr Savitha",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F092",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr ADITYA SUBRAMANIAM",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F093",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Dr ATHIRA T M",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "MAT2101"
+                ]
+            },
+            {
+                "avg_leaves_per_month": 2,
+                "department": "DSE",
+                "designation": "Assistant Professor",
+                "faculty_id": "F094",
+                "labs": [],
+                "max_hours_per_week": 20,
+                "name": "Vinayak Mantoor",
+                "preferred_time_slots": [
+                    1,
+                    2,
+                    3,
+                    4,
+                    5,
+                    6,
+                    7,
+                    8,
+                    9,
+                    10
+                ],
+                "subjects": [
+                    "CSS2102"
+                ]
+            }
+        ],
+        "genetic_algorithm_params": {
+            "crossover_rate": 0.8,
+            "early_stopping_patience": 10,
+            "elite_size": 5,
+            "generations": 50,
+            "mutation_rate": 0.2,
+            "population_size": 50
+        },
+        "labs": [
+            {
+                "credits": 2,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "duration_hours": 2.5,
+                "lab_id": "CSS2111",
+                "lab_rooms": [
+                    "CL_3",
+                    "CL_18",
+                    "CL_1",
+                    "CL_2",
+                    "CL_4",
+                    "CL_5",
+                    "CL_6",
+                    "CL_15",
+                    "CL_7",
+                    "CL_8",
+                    "CL_9",
+                    "CL_20",
+                    "CL_24_AB4",
+                    "CL_21_AB4",
+                    "CL_23_AB4",
+                    "CL_10",
+                    "CL_11",
+                    "CL_12",
+                    "CL_13",
+                    "CL_01",
+                    "CL_14",
+                    "CL_17",
+                    "CL_16"
+                ],
+                "name": "Data Structures Lab",
+                "semester": 3,
+                "sessions_per_week": 1,
+                "specialization": "",
+                "type": "Lab"
+            },
+            {
+                "credits": 2,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "duration_hours": 2.5,
+                "lab_id": "CSS2112",
+                "lab_rooms": [
+                    "CL_3",
+                    "CL_6",
+                    "CL_15",
+                    "CL_2",
+                    "CL_4",
+                    "CL_5",
+                    "CL_7",
+                    "CL_8",
+                    "CL_9",
+                    "CL_24_AB4",
+                    "CL_13",
+                    "CL_1",
+                    "CL_11",
+                    "CL_10",
+                    "CL_12",
+                    "CL_01",
+                    "CL_14",
+                    "CL_17",
+                    "CL_16",
+                    "CL_18",
+                    "CL_20",
+                    "CL_21_AB4"
+                ],
+                "name": "Digital Systems Lab",
+                "semester": 3,
+                "sessions_per_week": 1,
+                "specialization": "",
+                "type": "Lab"
+            }
+        ],
+        "rooms": [
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-315",
+                "room_id": "AB5_315",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-316",
+                "room_id": "AB5_316",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-317",
+                "room_id": "AB5_317",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-318",
+                "room_id": "AB5_318",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-408",
+                "room_id": "AB5_408",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-409",
+                "room_id": "AB5_409",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-410",
+                "room_id": "AB5_410",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-411",
+                "room_id": "AB5_411",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-502",
+                "room_id": "AB5_502",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-503",
+                "room_id": "AB5_503",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-504",
+                "room_id": "AB5_504",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-506",
+                "room_id": "AB5_506",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 70,
+                "department": "",
+                "equipment": [
+                    "Projector"
+                ],
+                "name": "AB5-507",
+                "room_id": "AB5_507",
+                "type": "Classroom"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-01",
+                "room_id": "CL_01",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-1",
+                "room_id": "CL_1",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-10",
+                "room_id": "CL_10",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-11",
+                "room_id": "CL_11",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-12",
+                "room_id": "CL_12",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-13",
+                "room_id": "CL_13",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-14",
+                "room_id": "CL_14",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-15",
+                "room_id": "CL_15",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-16",
+                "room_id": "CL_16",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-17",
+                "room_id": "CL_17",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-18",
+                "room_id": "CL_18",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-2",
+                "room_id": "CL_2",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-20",
+                "room_id": "CL_20",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-21-AB4",
+                "room_id": "CL_21_AB4",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-23-AB4",
+                "room_id": "CL_23_AB4",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-24-AB4",
+                "room_id": "CL_24_AB4",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-3",
+                "room_id": "CL_3",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-4",
+                "room_id": "CL_4",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-5",
+                "room_id": "CL_5",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-6",
+                "room_id": "CL_6",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-7",
+                "room_id": "CL_7",
+                "type": "Lab"
+            },
+            {
+                "capacity": 30,
+                "department": "",
+                "equipment": [
+                    "Computers",
+                    "Projector"
+                ],
+                "name": "CL-9",
+                "room_id": "CL_9",
+                "type": "Lab"
+            }
+        ],
+        "special_requirements": {
+            "mentorship_break": {
+                "all_sections": true,
+                "duration": 1,
+                "period": null
+            }
+        },
+        "subjects": [
+            {
+                "credits": 4,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "lectures_per_week": 4,
+                "max_classes_per_day": 2,
+                "min_classes_per_week": 3,
+                "name": "Data Structures",
+                "semester": 3,
+                "specialization": "",
+                "subject_id": "CSS2101",
+                "tutorial_sessions": 0,
+                "type": "Theory"
+            },
+            {
+                "credits": 4,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "lectures_per_week": 4,
+                "max_classes_per_day": 2,
+                "min_classes_per_week": 3,
+                "name": "Data Communication and Computer Networks",
+                "semester": 3,
+                "specialization": "",
+                "subject_id": "CSS2102",
+                "tutorial_sessions": 0,
+                "type": "Theory"
+            },
+            {
+                "credits": 4,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "lectures_per_week": 4,
+                "max_classes_per_day": 2,
+                "min_classes_per_week": 3,
+                "name": "Data Analytics",
+                "semester": 3,
+                "specialization": "",
+                "subject_id": "CSS2103",
+                "tutorial_sessions": 0,
+                "type": "Theory"
+            },
+            {
+                "credits": 4,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "lectures_per_week": 4,
+                "max_classes_per_day": 2,
+                "min_classes_per_week": 3,
+                "name": "Digital Systems and Computer Organization",
+                "semester": 3,
+                "specialization": "",
+                "subject_id": "CSS2104",
+                "tutorial_sessions": 0,
+                "type": "Theory"
+            },
+            {
+                "credits": 4,
+                "departments": [
+                    "CSE",
+                    "IT",
+                    "CCE",
+                    "AIML",
+                    "DSE"
+                ],
+                "lectures_per_week": 4,
+                "max_classes_per_day": 2,
+                "min_classes_per_week": 3,
+                "name": "Discrete Mathematical Structures",
+                "semester": 3,
+                "specialization": "",
+                "subject_id": "MAT2101",
+                "tutorial_sessions": 0,
+                "type": "Theory"
+            }
+        ],
+        "updatedAt": "2025-09-16T15:42:49.608Z"
+    }
+}
