@@ -36,7 +36,7 @@ jobs:
             eval $(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
             git config --global user.name "EC2 Deployer"
-            git config --global user.email "ec2-deploy@synchron.com"
+            git config --global user.email "ec2-deploy@synchron.com" 
 
             if [ ! -d "Synchron" ]; then
               echo " Cloning repo for the first time..."
