@@ -1,0 +1,51 @@
+name: Deploy Synchron on EC2
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup SSH for EC2
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Copy deploy key and deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+        run: |
+          # Copy deploy key securely to EC2
+          echo "$DEPLOY_KEY" > deploy_key.pem
+          chmod 600 deploy_key.pem
+          scp -o StrictHostKeyChecking=no deploy_key.pem ubuntu@$EC2_HOST:/home/ubuntu/.ssh/deploy_key.pem
+          rm -f deploy_key.pem
+
+          # Run commands on EC2
+          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << 'EOF'
+            set -e
+            cd /home/ubuntu/Synchron || exit 1
+
+            echo " Setting up Git Deploy Key..."
+            eval $(ssh-agent -s)
+            ssh-add ~/.ssh/deploy_key.pem
+            git config --global user.name "EC2 Deployer"
+            git config --global user.email "ec2-deploy@synchron.com"
+
+            echo "Pulling latest code..."
+            git pull origin master
+
+            echo " Rebuilding Docker containers..."
+            docker-compose down
+            docker-compose up -d --build
+
+            echo " Deployment completed successfully!"
+          EOF
