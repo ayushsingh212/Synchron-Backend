@@ -23,16 +23,14 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
-          # Copy deploy key securely to EC2
           echo "$DEPLOY_KEY" > deploy_key.pem
           chmod 600 deploy_key.pem
           scp -o StrictHostKeyChecking=no deploy_key.pem ubuntu@$EC2_HOST:/home/ubuntu/.ssh/deploy_key.pem
           rm -f deploy_key.pem
 
-          # Run commands on EC2
           ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << 'EOF'
             set -e
-            cd /home/ubuntu/Synchron || exit 1
+            cd /home/ubuntu
 
             echo " Setting up Git Deploy Key..."
             eval $(ssh-agent -s)
@@ -40,7 +38,13 @@ jobs:
             git config --global user.name "EC2 Deployer"
             git config --global user.email "ec2-deploy@synchron.com"
 
-            echo "Pulling latest code..."
+            if [ ! -d "Synchron" ]; then
+              echo " Cloning repo for the first time..."
+              git clone git@github.com:ayushsingh211/Synchron.git
+            fi
+
+            cd Synchron
+            echo " Pulling latest changes..."
             git pull origin master
 
             echo " Rebuilding Docker containers..."
