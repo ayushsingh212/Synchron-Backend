@@ -5,101 +5,85 @@ import ApiResponse from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/sendMail.js";
 
-// OTP Generator
+// OTP Configuration
+const OTP_EXPIRY = 5 * 60; // 5 minutes
+const RATE_LIMIT = 100;    // max OTPs per hour
+const RESEND_LIMIT = 60;   // resend cooldown in seconds
+
+// Generate 6-digit OTP
 export const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString();
 
-const verifyOtp = async (organisationEmail, otp) => {
-  console.log("I have been hitted verify");
-
+// Verify OTP
+export const verifyOtp = async (organisationEmail, otp) => {
   const hashedOtp = await redisClient.get(`otp:data:${organisationEmail}`);
   if (!hashedOtp) return false;
-
-  const isOtpCorrect = await bcrypt.compare(otp, hashedOtp);
-  return isOtpCorrect;
+  return await bcrypt.compare(otp, hashedOtp);
 };
 
-const sendOTP = asyncHandler(async (req, res) => {
-  const OTP_EXPIRY = 5 * 60; 
-  const RATE_LIMIT = 100;      
-  const RESEND_LIMIT = 60;   
+// Send OTP
+export const sendOTP = asyncHandler(async (req, res) => {
   const organisationEmail = req.body?.organisationEmail || req.user?.organisationEmail;
-  console.log("I have been hitted orgEm",organisationEmail)
+
   if (!organisationEmail) {
     throw new ApiError(400, "organisationEmail is required");
   }
 
-  const now = Date.now();
-
-  // 1. Resend cooldown check
-  const lastSent = await redisClient.get(`otp:lastSent:${organisationEmail}`);
-  if (lastSent && now - parseInt(lastSent) < RESEND_LIMIT * 1000) {
-    throw new ApiError(429, "Please wait before requesting another OTP.");
+  if (!/^\S+@\S+\.\S+$/.test(organisationEmail)) {
+    throw new ApiError(400, "Please provide a valid organisationEmail");
   }
 
-  // 2. Rate limit per hour
+  const now = Date.now();
+
+  // 1️⃣ Resend cooldown
+  const lastSent = await redisClient.get(`otp:lastSent:${organisationEmail}`);
+  if (lastSent && now - parseInt(lastSent) < RESEND_LIMIT * 1000) {
+    throw new ApiError(429, `Please wait ${RESEND_LIMIT} seconds before requesting another OTP.`);
+  }
+
+  // 2️⃣ Rate limit per hour
   const sentCount = await redisClient.get(`otp:count:${organisationEmail}`);
   if (sentCount && parseInt(sentCount) >= RATE_LIMIT) {
     throw new ApiError(429, "OTP limit exceeded. Try again after 1 hour.");
   }
 
-  // 3. Generate and hash OTP
+  // 3️⃣ Generate and hash OTP
   const otp = generateOTP();
   const hashedOtp = await bcrypt.hash(otp, 10);
 
-  await redisClient.set(`otp:data:${organisationEmail}`, hashedOtp, { ex: OTP_EXPIRY });
+  // 4️⃣ Store OTP in Redis
+  await redisClient.set(`otp:data:${organisationEmail}`, hashedOtp, { EX: OTP_EXPIRY });
 
-  await redisClient.set(`otp:lastSent:${organisationEmail}`, now.toString(), { ex: RESEND_LIMIT });
+  // 5️⃣ Update last sent time
+  await redisClient.set(`otp:lastSent:${organisationEmail}`, now.toString(), { EX: RESEND_LIMIT });
 
-  // 6. Track OTP request count (increment + set expiry)
+  // 6️⃣ Update OTP request count
+  const isNewKey = !sentCount;
   await redisClient.incr(`otp:count:${organisationEmail}`);
-  await redisClient.expire(`otp:count:${organisationEmail}`, 10); // expire in 1 hour
+  if (isNewKey) await redisClient.expire(`otp:count:${organisationEmail}`, 3600); // 1 hour
 
-  // 7. Send organisationEmail
-  await sendEmail(organisationEmail, "Your OTP for organisationEmail Verification", `Your OTP is: ${otp}`);
-
-  // 8. Respond
-  return res.status(202).json(
-    new ApiResponse(200, {}, "OTP has been sent successfully")
+  // 7️⃣ Send OTP email
+  await sendEmail(
+    organisationEmail,
+    "Your OTP for Organisation Verification",
+    `Your OTP is: ${otp}. It expires in 5 minutes.`
   );
+
+  return res.status(202).json(new ApiResponse(200, {}, "OTP has been sent successfully"));
 });
-const checkOtp = asyncHandler(async(req,res)=>{
 
+// Check OTP
+export const checkOtp = asyncHandler(async (req, res) => {
+  const { organisationEmail, otp } = req.body;
 
-  const {organisationEmail,otp} = req.body 
-
-if(!/^\S+@\S+\.\S+$/.test(organisationEmail))
-{
-   throw new ApiError(400,"Please provide a valid organisationEmail")
-
-}
-
-  if(!otp)
-  {
-    throw new ApiError(400,"Please provide the organisationEmail and the otp")
+  if (!organisationEmail || !otp) {
+    throw new ApiError(400, "Please provide both organisationEmail and OTP");
   }
 
- const isCorrect = await verifyOtp(organisationEmail,otp)
+  if (!/^\S+@\S+\.\S+$/.test(organisationEmail)) {
+    throw new ApiError(400, "Please provide a valid organisationEmail");
+  }
 
+  const isCorrect = await verifyOtp(organisationEmail, otp);
 
-
-
-
-
-
-console.log(isCorrect)
-
-
-
-return res.status(200)
-.json(
-  new ApiResponse(200,{isCorrect},"Otp checked ")
-)
-
-
-
-
-
-
-})
-
-export { sendOTP,verifyOtp, checkOtp};
+  return res.status(200).json(new ApiResponse(200, { isCorrect }, "OTP verification result"));
+});

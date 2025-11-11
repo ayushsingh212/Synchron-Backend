@@ -11,6 +11,7 @@ const organisationSchema = new Schema(
       trim: true,
       required: true,
       lowercase: true,
+      maxLength:100
     },
     organisationEmail: {
       type: String,
@@ -18,11 +19,13 @@ const organisationSchema = new Schema(
       index: true,
       lowercase: true,
       required: true,
+      maxLength:50
     },
     organisationContactNumber: {
       type: String,
       unique: true,
       required: true,
+      maxLength:10
     },
     password: {
       type: String,
@@ -36,7 +39,6 @@ const organisationSchema = new Schema(
   { timestamps: true }
 );
 
-// Pre-save hook for hashing passwords
 organisationSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   this.password = await bcrypt.hash(this.password, 12);
