@@ -20,9 +20,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-// ===== BODY PARSER =====
-app.use(express.json({ limit: "1mb" }));
-app.use(express.urlencoded({ extended: true, limit: "16kb" }));
+app.use(express.json({ limit: "100mb" }));
+app.use(express.urlencoded({ extended: true, limit: "100mb" }));
+
 
 // ===== STATIC FILES =====
 app.use(express.static("public"));
