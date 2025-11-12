@@ -365,6 +365,8 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
 
         const responseData = apiResp?.data;
 
+        console.log("I am the incoming res from flask",apiResp)
+
         if (
           !responseData ||
           (typeof responseData === "object" &&

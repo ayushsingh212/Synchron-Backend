@@ -27,13 +27,12 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 // ===== STATIC FILES =====
 app.use(express.static("public"));
 
-// ===== COOKIE PARSER =====
+
 app.use(cookieParser());
 
-// ===== ROUTES =====
 app.use("/api/v1", allRouter);
 
-// ===== ERROR HANDLER =====
+
 app.use((err, req, res, next) => {
   const statusCode = err.statusCode || 500;
   res.status(statusCode).json({
