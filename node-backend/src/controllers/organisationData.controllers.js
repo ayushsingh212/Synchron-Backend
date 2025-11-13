@@ -3,16 +3,15 @@ import { OrganisationData } from "../models/organisationData.model.js";
 import { SectionTimetable } from "../models/sectionTimetable.model.js";
 
 
-// Save new timetable
 export const saveTimetable = async (req, res) => {
   try {
     const organisationId = req.organisation?._id;
-    if (!organisationId)
+    if (!organisationId) {
       return res.status(401).json({ message: "Login first" });
+    }
 
     console.log("Incoming timetable data:", req.body);
 
-    
     const {
       college_info,
       time_slots,
@@ -37,7 +36,7 @@ export const saveTimetable = async (req, res) => {
       rooms,
       constraints,
       special_requirements,
-      genetic_algorithm_params
+      genetic_algorithm_params,
     };
 
     const timetable = await OrganisationData.findOneAndUpdate(
@@ -45,6 +44,11 @@ export const saveTimetable = async (req, res) => {
       { $set: updateData },
       { new: true, upsert: true }
     );
+
+    await Promise.all([
+      SectionTimetable.deleteMany({ organisationId }),
+      FacultyTimetable.deleteMany({ organisationId }),
+    ]);
 
     res.status(201).json({
       message: "Timetable saved/updated successfully",
