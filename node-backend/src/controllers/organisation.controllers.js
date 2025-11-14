@@ -166,7 +166,9 @@ const verifyOrganisationEmail = asyncHandler(async (req, res) => {
   org.isEmailVerified = true;
   await org.save();
 
-  return res.status(200).json(new ApiResponse(200, {}, "Email verified successfully"));
+  const {accessToken,refreshToken} = await generateAccessAndRefreshToken(org._id);
+
+  return res.status(200).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new ApiResponse(200, {}, "Email verified successfully"));
 });
 
 
