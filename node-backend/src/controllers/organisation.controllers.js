@@ -82,7 +82,7 @@ const generateAccessAndRefreshToken = async (organisationId) => {
 };
 
 
-export const getOrganisationFullDetails = asyncHandler(async (req, res) => {
+ const getOrganisationFullDetails = asyncHandler(async (req, res) => {
   validateOrThrow(idParamSchema, req.params);
   const { id } = req.params;
 
@@ -368,7 +368,7 @@ const getCurrentOrganisation = asyncHandler(async (req, res) => {
 });
 
 
-export const getAllOrganisation = asyncHandler(async (req, res) => {
+ const getAllOrganisation = asyncHandler(async (req, res) => {
   const organisations = await Organisation.find({}).select("-password");
   if (!organisations || organisations.length === 0) {
     throw new ApiError(404, "No organisation exist");
