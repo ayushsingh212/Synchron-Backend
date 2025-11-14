@@ -122,36 +122,34 @@ const {refreshToken,...safeOrganisation} = organisation
   return res.status(201).json(new ApiResponse(201, safeOrganisation, "Organisation registered successfully"));
 });
 
-const verifyOrganisationEmail = asyncHandler(async(req,res)=>{
- 
-  const {organisationEmail} = req.params;
-const {otp} = req.body;
+const verifyOrganisationEmail = asyncHandler(async (req, res) => {
+  const { organisationEmail } = req.params;
+  const { otp } = req.body;
+
+
+  const isOtpCorrect = await verifyOtp(organisationEmail, otp, "register");
+
+  if (!isOtpCorrect) {
+    throw new ApiError(400, "OTP incorrect");
+  }
 
  
+  const org = await Organisation.findOne({ organisationEmail });
 
-const isOtpCorrect =  verifyOtp(organisationEmail,otp,"register")
-
-
-if(!isOtpCorrect)
-{
-  throw new ApiError(400,"Otp incorrect")
-}
-
-const org = Organisation.findOne({organisationEmail})
-
-org.isEmailVerified = true;
+  if (!org) {
+    throw new ApiError(404, "Organisation not found");
+  }
 
 
-org.save()
+  org.isEmailVerified = true;
+  await org.save();
 
+  // Use 200 status for successful verification
+  return res.status(200).json(
+    new ApiResponse(200, {}, "Email verified successfully")
+  );
+});
 
-return res.status(204).json(
-  new ApiResponse(204,{},"Email verified successfully")
-)
-
-
-
-})
 const loginOrganisation = asyncHandler(async (req, res) => {
   const { otp, organisationEmailOrorganisationContactNumber, password, organisationEmail } = req.body;
   
