@@ -4,6 +4,7 @@ import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/sendMail.js";
+import { Organisation } from "../models/organisation.model.js";
 
 const OTP_EXPIRY = 2 * 60; 
 const RATE_LIMIT = 10;    
@@ -31,7 +32,21 @@ export const sendOTP = asyncHandler(async (req, res) => {
   if (!organisationEmail) {
     throw new ApiError(400, "organisationEmail is required");
   }
+  let isEmailVerified = true;
+  if(purpose ==="register")
+  {
+      isEmailVerified = false;
+  }
+  
+  const isOrganisationExist  = await Organisation.findOne({
+    organisationEmail,
+    isEmailVerified
 
+  })
+  if(!isOrganisationExist)
+  {
+    throw new ApiError(400,"Organisation does not exist! Please Register  first")
+  }
   if (!purpose) {
     throw new ApiError(400, "OTP purpose is required");
   }
