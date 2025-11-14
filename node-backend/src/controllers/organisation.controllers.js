@@ -15,13 +15,58 @@ import { Timetable } from "../models/timetable.model.js";
 import { TimetableRequest } from "../models/timetableRequest.model.js";
 import { sendEmail } from "../utils/sendMail.js";
 
-/**
- * @desc Get full organisation details with all related data
- * @route GET /api/organisation/:id/full
- * @access Private (Organisation Admin)
- */
+// Zod validation
+import { z } from "zod";
+
+// helper: disallow emoji / extended pictographic characters
+const noEmoji = (s) => {
+  try {
+    return !/\p{Extended_Pictographic}/u.test(s);
+  } catch (e) {
+    // If engine does not support property escapes, fall back to basic check (will be permissive)
+    return true;
+  }
+};
+
+const objectIdPattern = /^[0-9a-fA-F]{24}$/;
+
+const registerSchema = z.object({
+  organisationName: z.string().min(3, "organisationName must be at least 3 characters").max(100, "organisationName too long").refine(noEmoji, { message: "organisationName must not contain emoji or pictographic characters" }),
+  organisationEmail: z.string().email("Invalid email").max(254),
+  password: z.string().min(8, "Password must be at least 8 characters").max(128),
+  organisationContactNumber: z.string().regex(/^\d{10}$/, "Contact number must be 10 digits"),
+});
+
+const verifyEmailParamsSchema = z.object({ organisationEmail: z.string().email() });
+const verifyEmailBodySchema = z.object({ otp: z.string().min(4).max(6).regex(/^\d+$/, "OTP must be numeric") });
+
+const loginWithOtpSchema = z.object({ organisationEmail: z.string().email(), otp: z.string().min(4).max(6).regex(/^\d+$/) });
+const loginWithPasswordSchema = z.object({ organisationEmailOrorganisationContactNumber: z.string().min(3), password: z.string().min(8) });
+
+const updateProfileSchema = z.object({
+  organisationName: z.string().min(3).max(100).optional().refine((v) => (v ? noEmoji(v) : true), { message: "organisationName must not contain emoji" }),
+  organisationEmail: z.string().email().optional(),
+  otp: z.string().min(4).max(6).optional(),
+  organisationContactNumber: z.string().regex(/^\d{10}$/, "Contact number must be 10 digits").optional(),
+});
+
+const changePasswordSchema = z.object({ oldPassword: z.string().min(1), newPassword: z.string().min(8).max(128) });
+
+const idParamSchema = z.object({ id: z.string().regex(objectIdPattern, "Invalid id") });
+
+// small helper to validate and throw ApiError
+const validateOrThrow = (schema, data) => {
+  const parsed = schema.safeParse(data);
+  if (!parsed.success) {
+    const firstError = parsed.error.errors[0];
+    throw new ApiError(400, firstError.message || "Validation error");
+  }
+  return parsed.data;
+};
+
 export const getOrganisationFullDetails = async (req, res) => {
   try {
+    validateOrThrow(idParamSchema, req.params);
     const { id } = req.params;
 
     // 1. Find organisation
@@ -48,7 +93,7 @@ export const getOrganisationFullDetails = async (req, res) => {
           .populate("facultyId", "facultyName email"),
       ]);
 
-  
+
     res.json({
       organisation,
       faculties,
@@ -59,8 +104,8 @@ export const getOrganisationFullDetails = async (req, res) => {
     });
   } catch (err) {
     console.error("Error fetching organisation details:", err);
-    res.status(500).json({
-      message: "Error fetching organisation details",
+    res.status(err.statusCode || 500).json({
+      message: err.message || "Error fetching organisation details",
       error: err.message,
     });
   }
@@ -82,11 +127,10 @@ const generateAccessAndRefreshToken = async (organisationId) => {
 
 
 const registerOrganisation = asyncHandler(async (req, res) => {
-  const { organisationName, organisationEmail, password, organisationContactNumber } = req.body;
+  
+  validateOrThrow(registerSchema, req.body);
 
-  if (!organisationName || !organisationEmail || !password || !organisationContactNumber) {
-    throw new ApiError(400, "All fields are required");
-  }
+  const { organisationName, organisationEmail, password, organisationContactNumber } = req.body;
 
   const existingOrganisation = await Organisation.findOne({
     $or: [{ organisationEmail }, { organisationContactNumber }],
@@ -115,7 +159,6 @@ const registerOrganisation = asyncHandler(async (req, res) => {
   });
 
 
-
 const {refreshToken,...safeOrganisation} = organisation
 
   
@@ -123,9 +166,11 @@ const {refreshToken,...safeOrganisation} = organisation
 });
 
 const verifyOrganisationEmail = asyncHandler(async (req, res) => {
+  validateOrThrow(verifyEmailParamsSchema, req.params);
+  validateOrThrow(verifyEmailBodySchema, req.body);
+
   const { organisationEmail } = req.params;
   const { otp } = req.body;
-
 
   const isOtpCorrect = await verifyOtp(organisationEmail, otp, "register");
 
@@ -151,21 +196,23 @@ const verifyOrganisationEmail = asyncHandler(async (req, res) => {
 });
 
 const loginOrganisation = asyncHandler(async (req, res) => {
+  // Branch validation: OTP or password
   const { otp, organisationEmailOrorganisationContactNumber, password, organisationEmail } = req.body;
-  
-  console.log("the otp is here",otp,organisationEmail)
-  console.log("Login has been hitted")
 
   let organisation;
 
   if (otp) {
-    if (!organisationEmail) throw new ApiError(400, "Organisation email is required for OTP verification");
+    // expect organisationEmail + otp
+    validateOrThrow(loginWithOtpSchema, { organisationEmail, otp });
+
     organisation = await Organisation.findOne({ organisationEmail,isEmailVerified:true });
     if (!organisation) throw new ApiError(404, "Organisation not found");
 
     const otpVerified = await verifyOtp(organisationEmail, otp);
     if (!otpVerified) throw new ApiError(400, "Invalid OTP");
   } else {
+    validateOrThrow(loginWithPasswordSchema, { organisationEmailOrorganisationContactNumber, password });
+
     if (!organisationEmailOrorganisationContactNumber || !password) {
       throw new ApiError(400, "Email/contact number and password are required");
     }
@@ -212,11 +259,14 @@ const logoutOrganisation = asyncHandler(async (req, res) => {
  */
 const updateProfile = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
-  const { organisationName, organisationEmail, otp, organisationContactNumber } = req.body;
+  // validate incoming fields
+  const validated = validateOrThrow(updateProfileSchema, req.body);
+
+  const { organisationName, organisationEmail, otp, organisationContactNumber } = validated;
 
   const updates = {};
   if (organisationName?.trim()) updates.organisationName = organisationName.trim();
-  if (/^\d{10}$/.test(organisationContactNumber)) updates.organisationContactNumber = organisationContactNumber;
+  if (/^\d{10}$/.test(organisationContactNumber || "")) updates.organisationContactNumber = organisationContactNumber;
 
   if (organisationEmail && /\S+@\S+\.\S+/.test(organisationEmail)) {
     const hashedOtp = await redisClient.get(`otp:data:${organisationEmail}`);
@@ -240,6 +290,8 @@ const updateProfile = asyncHandler(async (req, res) => {
  * CHANGE PASSWORD
  */
 const changePassword = asyncHandler(async (req, res) => {
+  validateOrThrow(changePasswordSchema, req.body);
+
   const organisationId = req.organisation?._id;
   const { oldPassword, newPassword } = req.body;
 
@@ -268,6 +320,8 @@ const updateAvatar = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req.files?.avatar?.[0]?.path;
   if (!avatarLocalPath) throw new ApiError(400, "Avatar file is required");
+
+  // optional: validate file size / mimetype here if your multer populates it
 
   // Delete old avatar if exists
   if (organisation.avatar) {
