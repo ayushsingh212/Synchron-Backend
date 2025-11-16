@@ -183,7 +183,7 @@ const loginOrganisation = asyncHandler(async (req, res) => {
     organisation = await Organisation.findOne({ organisationEmail, isEmailVerified: true });
     if (!organisation) throw new ApiError(404, "Organisation not found");
 
-    const otpVerified = await verifyOtp(organisationEmail, otp);
+    const otpVerified = await verifyOtp(organisationEmail, otp,"login");
     if (!otpVerified) throw new ApiError(400, "Invalid OTP");
   } else {
     validateOrThrow(loginWithPasswordSchema, { organisationEmailOrorganisationContactNumber, password });
