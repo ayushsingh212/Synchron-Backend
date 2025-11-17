@@ -201,7 +201,7 @@ export const updateMultipleTimetableSlots = asyncHandler(async (req, res) => {
     // Save the updated timetable
     const updatedTimetable = await sectionTimetable.save();
 
-    // Convert to lean object and remove MongoDB fields
+   
     const cleanTimetable = updatedTimetable.toObject();
     delete cleanTimetable._id;
     delete cleanTimetable.__v;
@@ -219,63 +219,80 @@ export const updateMultipleTimetableSlots = asyncHandler(async (req, res) => {
 });
 export const updateSectionTimetable = asyncHandler(async (req, res) => {
   try {
+    console.log("Incoming update body:", req.body);
 
-     console.log("Here is the incoming body",req.body)
+    const organisationId = req.organisation?._id;
     const { section_id } = req.body;
-  const updateData = req.body;
 
-    
+    if (!organisationId) {
+      throw new ApiError(401, "Organisation authentication missing");
+    }
 
     if (!section_id) {
-      return res.status(400).json(
-        new ApiResponse(400, null, "Section ID is required")
+      return res
+        .status(400)
+        .json(new ApiResponse(400, null, "Section ID is required"));
+    }
+
+    const updateData = req.body;
+
+    const existingSection = await SectionTimetable.findOne({
+      section_id,
+      organisationId,
+    });
+
+    if (!existingSection) {
+      throw new ApiError(
+        404,
+        `Section with ID '${section_id}' not found for this organisation`
       );
     }
-     const existingSection = await SectionTimetable.findOne({ section_id });
-        if (!existingSection) {
-          throw new ApiError(404, `Section with ID ${section_id} not found`);
-        }
 
-
-
-    const updatedSection = await FacultyTimetable.findOneAndUpdate(
-      { section_id },
+    // Update section timetable
+    const updatedSection = await SectionTimetable.findOneAndUpdate(
+      { section_id, organisationId },
       updateData,
       {
         new: true,
-        runValidators: true, 
-        context: 'query' 
+        runValidators: true,
+        context: "query",
       }
     ).lean();
+
     if (!updatedSection) {
-      return res.status(404).json(
-        new ApiResponse(404, null, "Section timetable not found")
-      );
+      return res
+        .status(404)
+        .json(new ApiResponse(404, null, "Section timetable not found"));
     }
 
-
     return res.status(200).json(
-      new ApiResponse(200, updatedSection, "Section timetable updated successfully")
+      new ApiResponse(
+        200,
+        updatedSection,
+        "Section timetable updated successfully"
+      )
     );
-
   } catch (error) {
-  console.error("Error in updateSectionTimetable:", error);
+    console.error("Error in updateSectionTimetable:", error);
 
     if (error instanceof ApiError) {
       throw error;
     }
 
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      throw new ApiError(400, `Validation error: ${errors.join(', ')}`);
-    }
-    if (error.name === 'CastError') {
-      throw new ApiError(400, "Invalid faculty ID format");
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      throw new ApiError(400, `Validation error: ${errors.join(", ")}`);
     }
 
-    throw new ApiError(500, "Internal server error while updating section timetable");
+    if (error.name === "CastError") {
+      throw new ApiError(400, "Invalid ID format");
+    }
+
+    throw new ApiError(
+      500,
+      "Internal server error while updating section timetable"
+    );
   }
-  
 });
 export const clearDaySlots = asyncHandler(async (req, res) => {
   try {

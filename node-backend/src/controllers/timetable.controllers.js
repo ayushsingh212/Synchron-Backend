@@ -565,7 +565,7 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
   console.log("I have been hit - updateFacultyTimetable");
 
 
-
+  const organisationId = req.organisation?._id;
   const { faculty_id } = req.body;
   const updateData = req.body;
 
@@ -588,7 +588,9 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
 
     // Update the faculty timetable
     const updatedFaculty = await FacultyTimetable.findOneAndUpdate(
-      { faculty_id },
+      { faculty_id,
+        organisationId
+       },
       updateData,
       {
         new: true, // Return the updated document
