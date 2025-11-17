@@ -590,7 +590,7 @@ export const getFacultyTimeTables = asyncHandler(async (req, res) => {
       console.log("No local data found, fetching from Flask API");
 
  
-      const response = await axios.get(`${FLASK_URL}/api/timetables/faculty`);
+      const response = await axios.get(`${FLASK_URL}/api/timetables/faculty`); 
 
       if (!response || !response.data) {
         throw new ApiError(404, "No faculty timetables found from API");

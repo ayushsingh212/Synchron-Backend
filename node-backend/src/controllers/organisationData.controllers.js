@@ -3,6 +3,8 @@ import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import { OrganisationData } from "../models/organisationData.model.js";
 import { SectionTimetable } from "../models/sectionTimetable.model.js";
 import { Timetable } from "../models/timetable.model.js";
+import asyncHandler from "../utils/asyncHandler.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 // No-emoji validator
 const noEmoji = (s) => {
@@ -39,6 +41,18 @@ const validate = (schema, data) => {
   return r.data;
 };
 
+export const resetOrganisationData = asyncHandler(async(req,res)=>{
+
+  const organisationId = req.organisation._id;
+
+
+  await OrganisationData.findByIdAndDelete(organisationId)
+
+return req.status(204).json(
+  new ApiResponse(204,{},"Organisation Data has been reset successfully")
+)
+
+})
 export const saveTimetable = async (req, res) => {
   try {
     const organisationId = req.organisation?._id;
@@ -59,7 +73,7 @@ export const saveTimetable = async (req, res) => {
       FacultyTimetable.deleteMany({ organisationId }),
     ]);
 
-    res.status(201).json({ message: "Timetable saved/updated successfully", timetable });
+    res.status(201).json({ message: "Data saved/updated successfully", timetable });
   } catch (error) {
     res.status(error.statusCode || 500).json({ message: "Error saving timetable", error: error.message });
   }
