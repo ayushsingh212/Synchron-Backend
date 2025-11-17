@@ -309,7 +309,7 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   });
   if (!response || !response.data) throw new ApiError(500, "Failed to start generation");
   
-  console.log("Here is the response",response)
+  console.log("Here is the response",response);
   const apiResponse = response.data.data.faculty;
   console.log(`Fetched ${Object.keys(apiResponse).length} faculty timetables from API`);
 
