@@ -2,7 +2,7 @@ import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { checkGenerationStatus, generateByGivingData, getDetailedTimeTable, getFacultyTimeTables       , getInfoPdf, getSectionTimeTablesDb, getSingleFacultyTimeTable, getSingleSectionTimeTable, startTimeTableCreation, updateFacultyTimetable } from "../controllers/timetable.controllers.js";
 import {   generateAndDownloadAllFacultyTimetables } from "../controllers/facultyTimetable.controllers.js";
-import {  replaceSectionTimetable } from "../controllers/sectionTimetable.controllers.js";
+import {   updateSectionTimetable } from "../controllers/sectionTimetable.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { saveTimetable } from "../controllers/organisationData.controllers.js";
 
@@ -33,7 +33,7 @@ router.get("/detailed",getDetailedTimeTable);
 
 
 
-router.put("/sectionUpdate",replaceSectionTimetable);
+router.put("/sectionUpdate",updateSectionTimetable);
 router.put("/facultyUpdate",updateFacultyTimetable);
 
 

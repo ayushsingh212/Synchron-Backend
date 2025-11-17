@@ -216,58 +216,65 @@ export const updateMultipleTimetableSlots = asyncHandler(async (req, res) => {
     );
   }
 });
-export const replaceSectionTimetable = asyncHandler(async (req, res) => {
+export const updateSectionTimetable = asyncHandler(async (req, res) => {
   try {
 
      console.log("Here is the incoming body",req.body)
-    const sectionId  = req.body.section.section_id;
+    const { section_id } = req.body;
+  const updateData = req.body;
 
-    const { timetable, periods } = req.body.section;
+    
 
-    // Validate required fields
-    if (!sectionId) {
+    if (!section_id) {
       return res.status(400).json(
         new ApiResponse(400, null, "Section ID is required")
       );
     }
-
-    // Find and update the section timetable
-    const updatedTimetable = await SectionTimetable.findOneAndUpdate(
-      {
-        $or: [
-          { section_id: sectionId },
-          { section_name: sectionId }
-        ]
-      },
-      {
-        $set: {
-          ...(timetable && { timetable }),
-          ...(periods && { periods }),
-          lastUpdated: new Date()
+     const existingSection = await SectionTimetable.findOne({ section_id });
+        if (!existingSection) {
+          throw new ApiError(404, `Section with ID ${section_id} not found`);
         }
-      },
-      { new: true, runValidators: true }
-    ).lean();
 
-    if (!updatedTimetable) {
+
+
+    const updatedSection = await FacultyTimetable.findOneAndUpdate(
+      { section_id },
+      updateData,
+      {
+        new: true,
+        runValidators: true, 
+        context: 'query' 
+      }
+    ).lean();
+    if (!updatedSection) {
       return res.status(404).json(
         new ApiResponse(404, null, "Section timetable not found")
       );
     }
 
-    // Remove MongoDB specific fields
-    const { _id, __v, ...cleanTimetable } = updatedTimetable;
 
     return res.status(200).json(
-      new ApiResponse(200, { data: cleanTimetable }, "Section timetable replaced successfully")
+      new ApiResponse(200, updatedSection, "Section timetable updated successfully")
     );
 
   } catch (error) {
-    console.error("Error replacing section timetable:", error);
-    return res.status(500).json(
-      new ApiResponse(500, null, "Internal server error while replacing timetable")
-    );
+  console.error("Error in updateSectionTimetable:", error);
+
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      throw new ApiError(400, `Validation error: ${errors.join(', ')}`);
+    }
+    if (error.name === 'CastError') {
+      throw new ApiError(400, "Invalid faculty ID format");
+    }
+
+    throw new ApiError(500, "Internal server error while updating section timetable");
   }
+  
 });
 export const clearDaySlots = asyncHandler(async (req, res) => {
   try {
