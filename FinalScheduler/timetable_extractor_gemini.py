@@ -10,6 +10,8 @@ import time
 
 # PDF Processing Libraries
 import pdfplumber
+import PyPDF2
+from pypdf import PdfReader
 import fitz  # PyMuPDF
 
 # Excel Processing Libraries
@@ -44,7 +46,7 @@ class TimetableExtractor:
         # Load the extraction prompt
         self.extraction_prompt = self._get_extraction_prompt()
         
-        logger.info("✅ Cerebras LLM extractor initialized successfully")
+        logger.info("Cerebras LLM extractor initialized successfully")
 
     def _test_connection(self):
         """Test Cerebras API connection"""
@@ -70,12 +72,12 @@ class TimetableExtractor:
             )
             
             if response.status_code == 200:
-                logger.info("✅ Cerebras API connection successful")
+                logger.info("Cerebras API connection successful")
             else:
-                logger.warning(f"⚠️ Cerebras API test failed: {response.status_code}")
+                logger.warning(f"Cerebras API test failed: {response.status_code}")
                 
         except Exception as e:
-            logger.warning(f"⚠️ Cerebras API connection test failed: {e}")
+            logger.warning(f"Cerebras API connection test failed: {e}")
 
     def _get_extraction_prompt(self) -> str:
         """Load extraction prompt from file or return built-in prompt"""
@@ -237,24 +239,36 @@ You are an expert timetable data extractor. Your task is to analyze the provided
 
 ## EXTRACTION RULES:
 
-1.  Look for time slots (periods) - extract start/end times from the document
-2.  Find all subjects mentioned - create subject IDs and names
-3.  Identify faculty names - generate faculty IDs (F001, F002, etc.)
-4.  Extract section names - create section IDs
-5.  Find room information - create room IDs
-6.  Map subjects to faculty based on timetable assignments, SHOULD NOT BE WRONG.
-7.  Infer department information from section names
-8.  Create appropriate constraints and requirements
-9.  Don't use ... to skip parts, use proper delimiters
+1. Look for time slots (periods) - extract start/end times EXACTLY as shown in the document
+2. DO NOT modify, add, or remove time periods
+3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
+4. Find all subjects mentioned - create subject IDs and names
+5. Identify faculty names - generate faculty IDs (F001, F002, etc.)
+6. Extract section names - create section IDs
+7. Find room information - create room IDs
+8. Map subjects to faculty based on timetable assignments
+9. Infer department information from section names
+10. Create appropriate constraints based on what's in the document
+11. Don't use ... to skip parts, use proper delimiters
+
+## CRITICAL INSTRUCTIONS FOR TIME SLOTS:
+- Extract ONLY the periods that are explicitly defined in the document
+- Use the EXACT start/end times - do NOT round or enhance
+- If break_periods are shown in the document, include them
+- If there's a lunch period marked in the document, include lunch_period
+- If mentorship/HOD period is explicitly mentioned, include mentorship_period
+- If any of these are NOT in the document, omit them from the extracted time_slots
+- working_days should be ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] unless the document shows otherwise
 
 ## IMPORTANT:
 
-  - Extract REAL data from the document, don't just use the template values
-  - If you find specific time periods, use those instead of the template times
-  - Map actual faculty names from the document
-  - Use actual subject names and codes from the document
-  - Create realistic section names based on what you see
-  - MAKE SURE TO PROVIDE VALID JSON
+- Extract REAL data from the document, don't just use template values
+- If you find specific time periods, use those instead of the template times
+- Map actual faculty names from the document
+- Use actual subject names and codes from the document
+- Create realistic section names based on what you see
+- NEVER auto-assume mentorship or break periods
+- MAKE SURE TO PROVIDE VALID JSON
 
 ## Document content to analyze:
 
@@ -428,7 +442,7 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
                     cleaned = strategy(json_content)
                     result = json.loads(cleaned)
                     if i > 0:
-                        logger.info(f"✅ JSON cleaned with strategy {i}")
+                        logger.info(f"JSON cleaned with strategy {i}")
                     return result
                 except json.JSONDecodeError:
                     continue
@@ -457,7 +471,9 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
 
     def enhance_extracted_data(self, data: Dict) -> Dict:
         """
-        Enhance and validate extracted data with proper defaults
+        Enhance and validate extracted data with minimal assumptions.
+        NEVER auto-add break_periods, lunch_period, or mentorship_period unless in extracted data.
+        NEVER auto-add mentorship_break unless explicitly mentioned.
         """
         if not data:
             data = {}
@@ -470,23 +486,17 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
                 "effective_date": "2025-09-15"
             }
         
+        # Preserve time_slots EXACTLY as extracted - do NOT enhance with defaults
         if 'time_slots' not in data or not data['time_slots'].get('periods'):
+            logger.warning("No time slots found in extracted data - cannot create defaults")
             data['time_slots'] = {
-                "periods": [
-                    {"id": 1, "start_time": "08:30", "end_time": "09:20"},
-                    {"id": 2, "start_time": "09:20", "end_time": "10:10"},
-                    {"id": 3, "start_time": "10:10", "end_time": "11:00"},
-                    {"id": 4, "start_time": "11:00", "end_time": "11:50"},
-                    {"id": 5, "start_time": "11:50", "end_time": "12:40"},
-                    {"id": 6, "start_time": "12:40", "end_time": "13:30"},
-                    {"id": 7, "start_time": "13:30", "end_time": "14:20"},
-                    {"id": 8, "start_time": "14:20", "end_time": "15:10"}
-                ],
-                "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-                "break_periods": [3, 6],
-                "lunch_period": 6,
-                "mentorship_period": 3
+                "periods": [],
+                "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
             }
+        else:
+            # Ensure working_days exists if not provided
+            if 'working_days' not in data['time_slots']:
+                data['time_slots']['working_days'] = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
         
         # Add other required sections with defaults
         data.setdefault('departments', [])
@@ -496,16 +506,23 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
         data.setdefault('rooms', [])
         data.setdefault('subject_name_mapping', {})
         
+        # Build constraints with ONLY extracted break/lunch periods
+        hard_constraints = {
+            "no_faculty_clash": True,
+            "no_room_clash": True,
+            "no_section_clash": True,
+            "max_classes_per_day_per_section": 7,
+            "lab_duration_consecutive": True
+        }
+        
+        # ONLY add break/lunch constraints if they were in the extracted data
+        if 'break_periods' in data['time_slots']:
+            hard_constraints['break_periods_fixed'] = data['time_slots']['break_periods']
+        if 'lunch_period' in data['time_slots']:
+            hard_constraints['lunch_period_fixed'] = data['time_slots']['lunch_period']
+        
         data.setdefault('constraints', {
-            "hard_constraints": {
-                "no_faculty_clash": True,
-                "no_room_clash": True,
-                "no_section_clash": True,
-                "break_periods_fixed": data['time_slots'].get('break_periods', [3, 6]),
-                "lunch_period_fixed": data['time_slots'].get('lunch_period', 6),
-                "max_classes_per_day_per_section": 7,
-                "lab_duration_consecutive": True
-            },
+            "hard_constraints": hard_constraints,
             "soft_constraints": {
                 "balanced_daily_load": {"weight": 0.3, "max_deviation": 2},
                 "faculty_preference_slots": {"weight": 0.2},
@@ -513,13 +530,15 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
             }
         })
         
-        data.setdefault('special_requirements', {
-            "mentorship_break": {
-                "period": data['time_slots'].get('mentorship_period', 3),
+        # ONLY add mentorship_break if mentorship_period was in extracted time_slots
+        special_reqs = data.get('special_requirements', {})
+        if 'mentorship_period' in data['time_slots']:
+            special_reqs['mentorship_break'] = {
+                "period": data['time_slots']['mentorship_period'],
                 "duration": 1,
                 "all_sections": True
             }
-        })
+        data['special_requirements'] = special_reqs
         
         data.setdefault('genetic_algorithm_params', {
             "population_size": 50,
@@ -554,7 +573,7 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
                 # Generate with Cerebras (ultra-fast!)
                 response_text, latency = self._generate_with_cerebras(full_prompt)
                 
-                logger.info(f"Cerebras API response time: {latency:.2f}s")
+                logger.info(f"🚀 Cerebras API response time: {latency:.2f}s")
                 
                 if not response_text:
                     raise Exception("Empty response from Cerebras API")
@@ -597,7 +616,7 @@ REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, n
         Main method to extract timetable data - ULTRA-FAST with Cerebras
         """
         try:
-            logger.info(f"🚀 Starting ULTRA-FAST Cerebras extraction for: {filename}")
+            logger.info(f"Starting ULTRA-FAST Cerebras extraction for: {filename}")
             total_start = time.time()
             
             # Determine file type and extract text

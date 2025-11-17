@@ -148,6 +148,14 @@ except ImportError as e:
 # GLOBAL STATE MANAGEMENT
 # =============================================================================
 
+# Store the latest timetable generation results
+timetable_results = {
+    "status": "not_started",
+    "timestamp": None,
+    "data": None,
+    "parsed_config": None
+}
+
 # Store dynamic update results
 latest_dynamic_update = {
     "status": "not_started",
@@ -167,19 +175,98 @@ def allowed_file(filename: str) -> bool:
 
 async def generate_timetables_async(config_data: Optional[Dict] = None):
     """
-    Generate timetables in background (DEPRECATED)
-    This function is no longer used as all generation is now synchronous
+    Generate timetables in background
+    Args:
+        config_data (dict): Configuration to use, or None to use default
     """
-    logger.info("Background generation function deprecated - no longer supported")
+    global timetable_results
+    try:
+        # Update status to in progress
+        timetable_results["status"] = "in_progress"
+        timetable_results["timestamp"] = datetime.now().isoformat()
+        
+        # Use provided config or load from file
+        if config_data:
+            config = config_data
+            logger.info("Using provided configuration for generation")
+        else:
+            try:
+                with open('corrected_timetable_config.json', 'r') as f:
+                    config = json.load(f)
+                logger.info("Using default configuration file")
+            except FileNotFoundError:
+                timetable_results["status"] = "failed"
+                timetable_results["error"] = "Default config file not found!"
+                return
+        
+        # Initialize timetable data and genetic algorithm
+        logger.info("Initializing timetable generation...")
+        data = TimetableData(config_dict=config)
+        ga = GeneticAlgorithm(data)
+        
+        # Generate population and evolve
+        ga.initialize_population()
+        ga.evolve()
+        
+        # Get the best solution
+        best_solution = ga.get_best_solution()
+        if not best_solution:
+            timetable_results["status"] = "failed"
+            timetable_results["error"] = "No valid solution found!"
+            logger.error("Failed to find valid timetable solution")
+            return
+        
+        # Export results in all formats
+        logger.info("Exporting timetable results...")
+        exporter = TimetableExporter(best_solution, data)
+        
+        # Store all generated data
+        timetable_results["data"] = {
+            "sections": exporter.get_section_wise_data(),
+            "faculty": exporter.get_faculty_wise_data(),
+            "detailed": exporter.get_detailed_data(),
+            "statistics": exporter.get_statistics()
+        }
+        
+        # Mark as completed
+        timetable_results["status"] = "completed"
+        timetable_results["timestamp"] = datetime.now().isoformat()
+        logger.info("Timetable generation completed successfully")
+        
+    except Exception as e:
+        timetable_results["status"] = "failed"
+        timetable_results["error"] = str(e)
+        logger.error(f"Timetable generation failed: {str(e)}")
 
-async def apply_dynamic_updates_async(events_data: Dict, base_timetable: Dict, config_source: Dict):
-    """Apply dynamic updates in background with provided timetable and config"""
-    global latest_dynamic_update
+async def apply_dynamic_updates_async(events_data: Dict, use_existing_timetable: bool = True):
+    """Apply dynamic updates in background"""
+    global latest_dynamic_update, timetable_results
     try:
         latest_dynamic_update["status"] = "in_progress"
         latest_dynamic_update["timestamp"] = datetime.now().isoformat()
         latest_dynamic_update["events"] = events_data
+        
+        # Determine which timetable to use as base
+        if use_existing_timetable and timetable_results.get("data"):
+            base_timetable = timetable_results["data"]
+            config_source = timetable_results.get("parsed_config")
+        else:
+            latest_dynamic_update["status"] = "failed"
+            latest_dynamic_update["error"] = "No base timetable available. Generate timetable first."
+            return
+        
+        # Save current timetable as original for comparison
         latest_dynamic_update["original_timetable"] = base_timetable
+        
+        # Use parsed config or default
+        if not config_source:
+            try:
+                with open('corrected_timetable_config.json', 'r') as f:
+                    config_source = json.load(f)
+            except FileNotFoundError:
+                latest_dynamic_update["status"] = "failed"
+                latest_dynamic_update["error"] = "Config file not found!"
+                return
         
         # Save config temporarily for dynamic updater
         temp_config_path = tempfile.mktemp(suffix='.json')
@@ -282,7 +369,8 @@ async def parse_timetable(
         end_time = datetime.now()
         extraction_time = (end_time - start_time).total_seconds()
         
-        # Note: config no longer cached globally
+        # Store parsed config for later use
+        timetable_results["parsed_config"] = result
         
         success_message = f"Timetable parsed successfully using {extraction_method}"
         if USE_CEREBRAS:
@@ -342,7 +430,10 @@ async def generate_timetable(
         
         # Generate timetables synchronously
         try:
-            genetic_algo = GeneticAlgorithm(config_data)
+            # Create TimetableData from incoming config dict so code can access ga_params, sections, etc.
+            data_obj = TimetableData(config_dict=config_data)
+
+            genetic_algo = GeneticAlgorithm(data_obj)
             genetic_algo.initialize_population()
             genetic_algo.evolve()
             solution = genetic_algo.get_best_solution()
@@ -354,12 +445,12 @@ async def generate_timetable(
                 )
             
             # Export to JSON format
-            exporter = TimetableExporter(solution, config_data)
+            exporter = TimetableExporter(solution, data_obj)
             timetable_data = {
-                "sections": exporter.export_section_timetables(),
-                "faculty": exporter.export_faculty_timetables(),
-                "detailed": exporter.export_detailed_timetable(),
-                "statistics": exporter.export_statistics()
+                "sections": exporter.get_section_wise_data(),
+                "faculty": exporter.get_faculty_wise_data(),
+                "detailed": exporter.get_detailed_data(),
+                "statistics": exporter.get_statistics()
             }
             
             logger.info("Timetable generation completed successfully")
@@ -386,16 +477,36 @@ async def generate_timetable(
         )
 
 @app.post("/api/generate-from-parsed")
-async def generate_from_parsed():
+async def generate_from_parsed(background_tasks: BackgroundTasks):
     """
-    DEPRECATED: Generate timetable using cached parsed configuration
-    This endpoint no longer works as configs are not cached globally
-    Use /api/generate instead with configuration in request body
+    Generate timetable using the most recently parsed configuration
     """
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Please use /api/generate with configuration in request body."
+    global timetable_results
+    
+    # Check if generation is already running
+    if timetable_results["status"] == "in_progress":
+        return {
+            "status": "already_running",
+            "message": "Generation is already in progress"
+        }
+    
+    # Check if parsed config is available
+    if not timetable_results.get("parsed_config"):
+        raise HTTPException(
+            status_code=400,
+            detail="No parsed configuration available. Please parse a timetable file first."
+        )
+    
+    # Start generation using parsed config
+    background_tasks.add_task(
+        generate_timetables_async,
+        timetable_results["parsed_config"]
     )
+    
+    return {
+        "status": "started",
+        "message": "Timetable generation started using parsed configuration"
+    }
 
 # =============================================================================
 # STATUS & RESULTS ENDPOINTS
@@ -403,22 +514,27 @@ async def generate_from_parsed():
 
 @app.get("/api/status")
 async def get_status():
-    """Get current system status"""
+    """Get current timetable generation status"""
     return {
-        "status": "ready",
-        "timestamp": datetime.now().isoformat(),
-        "llm_backend": "Cerebras" if USE_CEREBRAS else "Gemini",
-        "caching_mode": "No global caching - each user gets isolated per-request results",
-        "note": "Use /api/generate to generate timetables. Results are returned directly without caching."
+        "status": timetable_results["status"],
+        "timestamp": timetable_results.get("timestamp"),
+        "error": timetable_results.get("error"),
+        "has_parsed_config": timetable_results.get("parsed_config") is not None,
+        "has_results": timetable_results.get("data") is not None,
+        "llm_backend": "Cerebras" if USE_CEREBRAS else "Gemini"
     }
 
 @app.get("/api/results")
 async def get_all_results():
-    """DEPRECATED: Results endpoint"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Use /api/generate to get results directly."
-    )
+    """Get all timetable generation results"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No completed timetables available")
+    
+    return {
+        "status": "success",
+        "timestamp": timetable_results["timestamp"],
+        "data": timetable_results["data"]
+    }
 
 # =============================================================================
 # SECTION TIMETABLE ENDPOINTS
@@ -426,19 +542,23 @@ async def get_all_results():
 
 @app.get("/api/timetables/sections")
 async def get_all_sections():
-    """DEPRECATED: Get all section timetables"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Use /api/generate and access sections from response."
-    )
+    """Get all section timetables"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    return timetable_results["data"]["sections"]
 
 @app.get("/api/timetables/sections/{section_id}")
 async def get_single_section(section_id: str):
-    """DEPRECATED: Get specific section timetable"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Use /api/generate and access sections from response."
-    )
+    """Get specific section timetable"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    section_data = timetable_results["data"]["sections"].get(section_id)
+    if not section_data:
+        raise HTTPException(status_code=404, detail=f"Section '{section_id}' not found")
+    
+    return section_data
 
 # =============================================================================
 # FACULTY TIMETABLE ENDPOINTS
@@ -446,19 +566,43 @@ async def get_single_section(section_id: str):
 
 @app.get("/api/timetables/faculty")
 async def get_all_faculty():
-    """DEPRECATED: Get all faculty timetables"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Use /api/generate and access faculty from response."
-    )
+    """Get all faculty timetables"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    return timetable_results["data"]["faculty"]
 
 @app.get("/api/timetables/faculty/{faculty_id}")
 async def get_single_faculty(faculty_id: str):
-    """DEPRECATED: Get specific faculty timetable"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Use /api/generate and access faculty from response."
-    )
+    """Get specific faculty timetable"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    faculty_data = timetable_results["data"]["faculty"].get(faculty_id)
+    if not faculty_data:
+        raise HTTPException(status_code=404, detail=f"Faculty '{faculty_id}' not found")
+    
+    return faculty_data
+
+# =============================================================================
+# DETAILED & STATISTICS ENDPOINTS
+# =============================================================================
+
+@app.get("/api/timetables/detailed")
+async def get_detailed_timetable():
+    """Get detailed timetable data (all entries in list format)"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    return timetable_results["data"]["detailed"]
+
+@app.get("/api/timetables/statistics")
+async def get_statistics():
+    """Get timetable generation statistics"""
+    if timetable_results["status"] != "completed" or not timetable_results["data"]:
+        raise HTTPException(status_code=404, detail="No timetables generated yet")
+    
+    return timetable_results["data"]["statistics"]
 
 # =============================================================================
 # CONFIGURATION ENDPOINTS
@@ -466,11 +610,11 @@ async def get_single_faculty(faculty_id: str):
 
 @app.get("/api/config/parsed")
 async def get_parsed_config():
-    """DEPRECATED: Get the most recently parsed configuration"""
-    raise HTTPException(
-        status_code=410,
-        detail="This endpoint is deprecated. Configurations are no longer cached globally. Parse the timetable to get configuration."
-    )
+    """Get the most recently parsed configuration"""
+    if not timetable_results.get("parsed_config"):
+        raise HTTPException(status_code=404, detail="No parsed configuration available")
+    
+    return timetable_results["parsed_config"]
 
 @app.post("/api/config/validate")
 async def validate_config(config: Dict[str, Any] = Body(...)):
@@ -609,7 +753,7 @@ async def apply_dynamic_update(
             )
         
         # Check if base timetable exists
-        if use_existing and latest_dynamic_update.get("data") is None:
+        if use_existing and timetable_results.get("status") != "completed":
             raise HTTPException(
                 status_code=400,
                 detail="No base timetable available. Please generate a timetable first."
@@ -692,14 +836,14 @@ async def health_check():
         'llm_configured': llm_extractor is not None,
         'cerebras_available': USE_CEREBRAS,
         'gemini_api_available': os.getenv('GEMINI_API_KEY') is not None,
-        'caching_mode': 'No global caching - per-request isolation',
+        'generation_status': timetable_results["status"],
+        'dynamic_update_status': latest_dynamic_update["status"],
         'features': {
             'ultra_fast_extraction': USE_CEREBRAS,
             'llm_extraction': llm_extractor is not None,
             'genetic_algorithm': True,
             'dynamic_updates': True,
-            'multi_format_support': True,
-            'per_request_isolation': True
+            'multi_format_support': True
         }
     }
 
