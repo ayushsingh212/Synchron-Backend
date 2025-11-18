@@ -97,12 +97,17 @@ export const saveTimetable = async (req, res) => {
 export const getPreviousSavedData = async (req, res) => {
   try {
     const organisationId = req.organisation?._id;
+    const {course,year} = req.query;
+    if(!course || !year)
+    {
+      throw new ApiError(400,"Course or year is not specified");
+    }
     if (!organisationId) return res.status(401).json({ message: "Login first" });
 
-    const previousData = await OrganisationData.findOne({ organisationId });
+    const previousData = await OrganisationData.findOne({ organisationId,course:course.trim().toLowerCase(),year:year.trim().toLowerCase() });
     if (!previousData) return res.status(404).json({ message: "No previously saved timetable found" });
 
-    const { organisationId: _skip, ...rest } = previousData.toObject();
+    const { organisationId: _skip,course:skip1,year:skip3, ...rest } = previousData.toObject();
 
     res.status(200).json({ message: "Previous timetable fetched successfully", data: rest });
   } catch (error) {
