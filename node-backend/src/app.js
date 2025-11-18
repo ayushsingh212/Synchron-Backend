@@ -8,10 +8,10 @@ import { ZodError } from "zod";
 
 const app = express();
 
-const {FRONTEND_URL} = process.env;
+const {FRONTEND_URL,FRONTEND_URL2} = process.env;
 
 const corsOptions = {
-  origin: [FRONTEND_URL,"http://localhost:5173"],
+  origin: [FRONTEND_URL,FRONTEND_URL2,"http://localhost:5173"],
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,

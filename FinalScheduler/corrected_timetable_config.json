@@ -2314,7 +2314,7 @@
       "max_students_per_batch": 15,
       "batch_naming": [
         "A",
-        "B",
+        "B",   
         "C",
         "D"
       ],
