@@ -575,7 +575,7 @@ export const getFacultyTimeTablesForSpecific = asyncHandler(async (req, res) => 
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
   
-  console.log("here are the coming things".course,year,semester)
+  console.log("here are the coming things",course,year,semester)
   if (!organisationId) {
     throw new ApiError(401, "Login first");
   }
