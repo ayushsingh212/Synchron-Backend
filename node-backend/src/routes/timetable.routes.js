@@ -47,6 +47,6 @@ router.post("/saveData",saveTimetable)   // i th use
 router.post("/sendData",generateByGivingData)
 export default router;
 
-router.get("/sections/group",getSectionTimetablesByGroup);
+router.get("/sectionsTimeTables/group",getSectionTimetablesByGroup);
 router.get("/faculty/group",getFacultyTimetablesByGroup);
 router.get("/facultyTimeTable/getSpecific",getFacultyTimeTablesForSpecific);
