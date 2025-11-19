@@ -49,4 +49,4 @@ export default router;
 
 router.get("/sections/group",getSectionTimetablesByGroup);
 router.get("/faculty/group",getFacultyTimetablesByGroup);
-router.get("/faculty/getSpecific",getFacultyTimeTablesForSpecific);
+router.get("/facultyTimeTable/getSpecific",getFacultyTimeTablesForSpecific);
