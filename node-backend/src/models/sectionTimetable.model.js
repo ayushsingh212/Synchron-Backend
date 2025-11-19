@@ -27,7 +27,6 @@ const SectionTimetableSchema = new Schema(
     },
     section_id: { type: String, required: true },  // no `unique: true` here
     section_name: { type: String },
-    semester: { type: Number },
     specialization: { type: String, default: "" },
 
     // periods: store as Map (period -> time string)
@@ -40,9 +39,10 @@ const SectionTimetableSchema = new Schema(
 );
 
 SectionTimetableSchema.index(
-  { section_id: 1, organisationId: 1, course: 1, year: 1 },
+  { section_id: 1, organisationId: 1, course: 1, year: 1, semester: 1 },
   { unique: true }
 );
+
 
 
 export const SectionTimetable = mongoose.model(

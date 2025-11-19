@@ -413,42 +413,45 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
   try {
     const organisationId = req.organisation?._id;
 
-   if(!organisationId)
-   {
-    throw new ApiError(400,"Login first")
-   }
-    let docs = await SectionTimetable.find({ organisationId })
+    if (!organisationId) {
+      throw new ApiError(401, "Login first");
+    }
+
+    const docs = await SectionTimetable.find({ organisationId })
       .select("-organisationId")
       .lean();
 
-if(!docs || docs.length===0)
-{
-  throw new ApiError(400,"No timetable found for sections")
-}
-const {semester,year,course} = docs[0];
-console.log(docs)
+    if (!docs || docs.length === 0) {
+      throw new ApiError(400, "No timetable found for sections");
+    }
 
-    const timetableData = {};
-    docs.forEach((doc) => {
-      const { _id, __v, createdAt, updatedAt, ...cleanDoc } = doc;
-      timetableData[doc.section_id] = cleanDoc;
+    const grouped = {};
+
+    docs.forEach(doc => {
+      const { _id, __v, createdAt, updatedAt, ...clean } = doc;
+      
+      const { course, year, semester, section_id } = clean;
+
+      if (!grouped[course]) grouped[course] = {};
+      if (!grouped[course][year]) grouped[course][year] = {};
+      if (!grouped[course][year][semester]) grouped[course][year][semester] = {};
+
+      grouped[course][year][semester][section_id] = clean;
     });
 
-    return res.status(200).json(
-      new ApiResponse(200, {
-        course,
-        year,
-        semester,
-        timetableData
-      }, "Section timetables fetched successfully")
+    return res.json(
+      new ApiResponse(200, grouped, "Section timetables fetched successfully")
     );
+
   } catch (error) {
     console.error("Unexpected error in getSectionTimeTables:", error);
+
     return res
       .status(500)
-      .json(new ApiError(500,  "Internal server error"));
+      .json(new ApiError(500, "Internal server error"));
   }
 });
+
 
 
 
