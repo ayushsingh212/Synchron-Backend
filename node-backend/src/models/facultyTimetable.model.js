@@ -45,7 +45,7 @@ const timetableSchema = new Schema(
   { timestamps: true }
 );
 timetableSchema.index(
-  { faculty_id: 1, organisationId: 1, course: 1, year: 1 },
+  { faculty_id: 1, organisationId: 1, course: 1, year: 1 ,semester:1 },
   { unique: true }
 );
 
