@@ -467,23 +467,44 @@ export const getSingleSectionTimeTable = asyncHandler(async (req, res) => {
 
 
 export const getFacultyTimeTables = asyncHandler(async (req, res) => {
-  const organisationId = req.organisation?._id
-  let docs = await FacultyTimetable.find({ organisationId }).lean();
+  const organisationId = req.organisation?._id;
+
+  if (!organisationId) {
+    throw new ApiError(401, "Login first");
+  }
+
+  const docs = await FacultyTimetable.find({ organisationId }).lean();
 
   if (!docs || docs.length === 0) {
     throw new ApiError(400, "No timetables found");
   }
-  const formattedData = {};
-  docs.forEach(doc => {
-    const { _id, __v, createdAt, updatedAt, organisationId: orgId, ...cleanDoc } = doc;
-    formattedData[doc.faculty_id] = cleanDoc;
-  });
-  return res.status(200).json(
-    new ApiResponse(200, formattedData, "Faculty timetables fetched successfully")
-  );
-}
 
-);
+  const grouped = {};
+
+  docs.forEach(doc => {
+    const {
+      _id,
+      __v,
+      createdAt,
+      updatedAt,
+      organisationId: orgId,
+      ...clean
+    } = doc;
+
+    const { course, year, semester, faculty_id } = clean;
+
+    if (!grouped[course]) grouped[course] = {};
+    if (!grouped[course][year]) grouped[course][year] = {};
+    if (!grouped[course][year][semester]) grouped[course][year][semester] = {};
+
+    grouped[course][year][semester][faculty_id] = clean;
+  });
+
+  return res.status(200).json(
+    new ApiResponse(200, grouped, "Faculty timetables fetched successfully")
+  );
+});
+
 
 const getAllGeneratedSectionTimeTables = asyncHandler(async (req, res) => {
 
