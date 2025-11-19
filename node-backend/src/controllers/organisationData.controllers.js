@@ -61,39 +61,62 @@ return res.status(200).json(
 export const saveTimetable = async (req, res) => {
   try {
     const organisationId = req.organisation?._id;
-    if (!organisationId) return res.status(401).json({ message: "Login first" });
-   const {course,year,semester} = req.query;
-   
-   if(!course || course.trim()==="" || !year || year.trim()==="" || !semester || semester.trim()==="") 
-   {
-   throw new ApiError(400,"Year and Course are not specified");
-   }
+    if (!organisationId)
+      return res.status(401).json({ message: "Login first" });
+
+    const { course, year, semester } = req.query;
+
+    if (!course?.trim() || !year?.trim() || !semester?.trim()) {
+      throw new ApiError(400, "Course, Year or Semester missing");
+    }
+
+    const c = course.trim().toLowerCase();
+    const y = year.trim().toLowerCase();
+    const s = semester.trim().toLowerCase();
 
     const body = validate(saveTimetableSchema, req.body);
 
-    const updateData = { organisationId, year:year.toLowerCase(),course:course.toLowerCase(),semester:semester.trim().toLowerCase(),...body };
+    const updateData = {
+      organisationId,
+      course: c,
+      year: y,
+      semester: s,
+      ...body
+    };
 
     const timetable = await OrganisationData.findOneAndUpdate(
-      { organisationId,
-        course,
-        year,
-        semester
-
-       },
+      { organisationId, course: c, year: y, semester: s },
       { $set: updateData },
       { new: true, upsert: true }
     );
 
     await Promise.all([
-      SectionTimetable.deleteMany({ organisationId,course:course.trim().toLowerCase(),year:year.trim().toLowerCase(),semester:semester.trim().toLowerCase() }),
-      FacultyTimetable.deleteMany({ organisationId,course:course.trim().toLowerCase(),year:year.trim().toLowerCase(),semester:semester.trim().toLowerCase() }),
+      SectionTimetable.deleteMany({
+        organisationId,
+        course: c,
+        year: y,
+        semester: s
+      }),
+      FacultyTimetable.deleteMany({
+        organisationId,
+        course: c,
+        year: y,
+        semester: s
+      })
     ]);
 
-    res.status(201).json({ message: "Data saved/updated successfully", timetable });
+    res.status(201).json({
+      message: "Data saved/updated successfully",
+      timetable
+    });
   } catch (error) {
-    res.status(error.statusCode || 500).json({ message: "Error saving timetable", error: error.message });
+    res.status(error.statusCode || 500).json({
+      message: "Error saving timetable",
+      error: error.message
+    });
   }
 };
+
 
 export const getPreviousSavedData = async (req, res) => {
   try {

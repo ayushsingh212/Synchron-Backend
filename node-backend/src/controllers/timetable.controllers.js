@@ -121,7 +121,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   const organisationData = await OrganisationData.findOne({
     organisationId,
     course: course.trim().toLowerCase(),
-    year: year.trim().toLowerCase(), semester: semester.trim().toLowerCase()
+    year: year.trim().toLowerCase(),
+     semester: semester.trim().toLowerCase()  
   });
 
 
