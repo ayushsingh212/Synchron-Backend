@@ -110,7 +110,7 @@ export const getInfoPdf = async (req, res) => {
 export const startTimeTableCreation = asyncHandler(async (req, res) => {
 
   const organisationId = req.organisation?._id
-   const {course,year} = req.query;
+   const {course,year,semester} = req.query;
   if (!organisationId) {
     throw new ApiError(400, "Login First")
   }
@@ -120,8 +120,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   }
  
   const organisationData = await OrganisationData.findOne({  organisationId,
-        course,
-        year});
+        course:course.trim().toLowerCase(),
+        year:year.trim().toLowerCase(),semester:semester.trim().toLowerCase()});
 
 
   if (!organisationData) {
@@ -338,8 +338,9 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       {
         faculty_id: dbFacultyId,
         organisationId,
-        course:course.toLowerCase(),
-        year:year.toLowerCase()
+        course:course.trim().toLowerCase(),
+        year:year.trim().toLowerCase(),
+        semester:semester.trim().toLowerCase()
       },
       {
         ...facultyData,
@@ -367,8 +368,9 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
               update: {
                 $set: {
                   organisationId,
-                  course:course.toLowerCase(),
-                  year:year.toLowerCase(),
+                  course:course.trim().toLowerCase(),
+                  year:year.trim().toLowerCase(),
+                  semester:semester.trim().toLowerCase(),
                   section_id: sec.section_id,
                   section_name: sec.section_name,
                   semester: sec.semester,

@@ -13,6 +13,12 @@ const SectionTimetableSchema = new Schema(
     trim:true,
     required:true
   },
+   semester:{
+      type:String,
+      required:true,
+      trim:true,
+      lowercase:true
+    },
   year:{
       type:String,
       required:true,
