@@ -737,7 +737,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   });
 
   const gaData = response?.data?.data;
-
+ 
+    console.log("Here is this coming from flask ",gaData)
   if (!gaData || !Array.isArray(gaData.solutions) || gaData.solutions.length === 0) {
     throw new ApiError(500, "Model did not return any solutions");
   }
