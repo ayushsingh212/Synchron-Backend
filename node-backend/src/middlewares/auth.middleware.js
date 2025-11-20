@@ -28,7 +28,7 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
 
  
   const organisation = await Organisation.findById(decoded?._id).select("-password -refreshToken");
-  if (!Organisation) {
+  if (!organisation) {
     throw new ApiError(404, "Organisation not found for this token");
   }
 
@@ -38,9 +38,11 @@ const verifyJWT = asyncHandler(async (req, res, next) => {
 
 export { verifyJWT };
  export const options = {
-  httpOnly:true,
-  secure:true,
+  httpOnly: true,
+  secure: true,
   sameSite: "none",
- maxAge: 7 * 24 * 60 * 60 * 1000 
- }
+  domain: ".cronaweb.me",
+  path: "/",
+  maxAge: 7 * 24 * 60 * 60 * 1000
+}
 
