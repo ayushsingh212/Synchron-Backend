@@ -93,7 +93,7 @@ class TimetableExtractor:
         return """
 # Timetable Data Extractor Prompt
 
-You are an expert timetable data extractor. Your task is to analyze the provided timetable document and extract structured information.
+You are an expert university data extractor. Your task is to analyze the provided university data document and extract structured information.
 
 ## CRITICAL INSTRUCTIONS:
 
@@ -186,7 +186,7 @@ You are an expert timetable data extractor. Your task is to analyze the provided
       "subjects": ["CS301", "CS301L"],
       "max_hours_per_week": 20,
       "avg_leaves_per_month": 2,
-      "preferred_time_slots": [1, 2, 3, 5, 7, 8]
+      "preferred_time_slots": [1, 2, 3, 4, 5, 7, 8]
     }}
   ],
   "rooms": [
@@ -208,8 +208,7 @@ You are an expert timetable data extractor. Your task is to analyze the provided
       "no_faculty_clash": true,
       "no_room_clash": true,
       "no_section_clash": true,
-      "break_periods_fixed": [4, 6],
-      "lunch_period_fixed": 6,
+      "max_classes_per_subject_per_day": 2,
       "max_classes_per_day_per_section": 7,
       "lab_duration_consecutive": true
     }},
@@ -217,13 +216,6 @@ You are an expert timetable data extractor. Your task is to analyze the provided
       "balanced_daily_load": {{"weight": 0.3, "max_deviation": 2}},
       "faculty_preference_slots": {{"weight": 0.2}},
       "minimize_faculty_travel": {{"weight": 0.15}}
-    }}
-  }},
-  "special_requirements": {{
-    "mentorship_break": {{
-      "period": 4,
-      "duration": 1,
-      "all_sections": true
     }}
   }},
   "genetic_algorithm_params": {{

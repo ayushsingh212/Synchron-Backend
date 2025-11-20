@@ -408,17 +408,12 @@ async def generate_timetable(
 ):
     """
     Generate timetable using configuration and return results directly
-    
-    Options:
-    1. Use JSON configuration from request body
-    2. Use default configuration file
-    
-    Returns the generated timetable data directly without caching
+
+    Now returns top 3 solutions.
     """
     try:
         config_data = None
         
-        # Try to get configuration from request
         if request:
             config_data = request
             logger.info("Using configuration from request body")
@@ -428,47 +423,101 @@ async def generate_timetable(
                 detail="Config file not found! Please provide configuration in request body."
             )
         
-        # Generate timetables synchronously
+        # Auto-extract 'data' field if the request is a wrapped parse response
+        if isinstance(config_data, dict) and 'data' in config_data and 'success' in config_data:
+            logger.info("Detected wrapped parse response; extracting 'data' field")
+            config_data = config_data['data']
+        
         try:
-            # Create TimetableData from incoming config dict so code can access ga_params, sections, etc.
+            # ===== SANITY CHECK: verify required classes exist =====
+            logger.info("=== SANITY CHECK: Verifying required classes ===")
+            
+            # Count top-level fields
+            subjects_count = len(config_data.get('subjects') or [])
+            faculty_count = len(config_data.get('faculty') or [])
+            rooms_count = len(config_data.get('rooms') or [])
+            departments_count = len(config_data.get('departments') or [])
+            
+            logger.info(f"Config has: subjects={subjects_count}, faculty={faculty_count}, rooms={rooms_count}, departments={departments_count}")
+            
+            # Validate that required arrays are not empty
+            if subjects_count == 0:
+                logger.error("Config has 0 subjects! Cannot generate timetable.")
+                raise HTTPException(status_code=400, detail="Config must have at least one subject")
+            if faculty_count == 0:
+                logger.error("Config has 0 faculty! Cannot generate timetable.")
+                raise HTTPException(status_code=400, detail="Config must have at least one faculty member")
+            if rooms_count == 0:
+                logger.error("Config has 0 rooms! Cannot generate timetable.")
+                raise HTTPException(status_code=400, detail="Config must have at least one room")
+            if departments_count == 0:
+                logger.error("Config has 0 departments! Cannot generate timetable.")
+                raise HTTPException(status_code=400, detail="Config must have at least one department")
+            
+            # Construct TimetableData and check required classes
             data_obj = TimetableData(config_dict=config_data)
+            
+            # Count sections
+            sections_count = len(data_obj.sections)
+            logger.info(f"After TimetableData construction: sections={sections_count}")
+            
+            # Create a temporary chromosome to compute required classes
+            from timetable_generator import TimetableChromosome
+            temp_chrom = TimetableChromosome(data_obj)
+            total_required = sum(len(v) for v in temp_chrom.required_classes_map.values())
+            logger.info(f"Total required classes across all sections: {total_required}")
+            
+            if total_required == 0:
+                logger.error("No required classes found! Check subject-department matching or section configuration.")
+                raise HTTPException(
+                    status_code=400,
+                    detail="No required classes could be computed from the provided config. Check that subjects match section departments."
+                )
+            
+            logger.info("=== SANITY CHECK PASSED ===")
+            # ===== END SANITY CHECK =====
 
             genetic_algo = GeneticAlgorithm(data_obj)
             genetic_algo.initialize_population()
             genetic_algo.evolve()
-            solution = genetic_algo.get_best_solution()
-            
-            if not solution:
+
+            # NEW: get top 3 solutions
+            solutions = genetic_algo.get_best_solution()
+
+            if not solutions:
                 raise HTTPException(
                     status_code=400,
                     detail="No valid solution found!"
                 )
-            
-            # Export to JSON format
-            exporter = TimetableExporter(solution, data_obj)
-            timetable_data = {
-                "sections": exporter.get_section_wise_data(),
-                "faculty": exporter.get_faculty_wise_data(),
-                "detailed": exporter.get_detailed_data(),
-                "statistics": exporter.get_statistics()
-            }
-            
+
+            exported_solutions = []
+            for idx, sol in enumerate(solutions, start=1):
+                exporter = TimetableExporter(sol, data_obj)
+                exported_solutions.append({
+                    "rank": idx,
+                    "fitness": sol.fitness_score,
+                    "constraint_violations": sol.constraint_violations,
+                    "sections": exporter.get_section_wise_data(),
+                    "faculty": exporter.get_faculty_wise_data(),
+                    "detailed": exporter.get_detailed_data(),
+                    "statistics": exporter.get_statistics(),
+                })
+
             logger.info("Timetable generation completed successfully")
             
-            # Return data directly without caching
             return {
                 "status": "completed",
                 "timestamp": datetime.now().isoformat(),
-                "data": timetable_data
+                "solutions": exported_solutions,  # list of 3
             }
-            
+
         except Exception as e:
             logger.error(f"Timetable generation failed: {str(e)}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Generation failed: {str(e)}"
             )
-    
+
     except Exception as e:
         logger.error(f"Failed to generate timetable: {str(e)}")
         raise HTTPException(
@@ -476,37 +525,6 @@ async def generate_timetable(
             detail=f"Failed to generate timetable: {str(e)}"
         )
 
-@app.post("/api/generate-from-parsed")
-async def generate_from_parsed(background_tasks: BackgroundTasks):
-    """
-    Generate timetable using the most recently parsed configuration
-    """
-    global timetable_results
-    
-    # Check if generation is already running
-    if timetable_results["status"] == "in_progress":
-        return {
-            "status": "already_running",
-            "message": "Generation is already in progress"
-        }
-    
-    # Check if parsed config is available
-    if not timetable_results.get("parsed_config"):
-        raise HTTPException(
-            status_code=400,
-            detail="No parsed configuration available. Please parse a timetable file first."
-        )
-    
-    # Start generation using parsed config
-    background_tasks.add_task(
-        generate_timetables_async,
-        timetable_results["parsed_config"]
-    )
-    
-    return {
-        "status": "started",
-        "message": "Timetable generation started using parsed configuration"
-    }
 
 # =============================================================================
 # STATUS & RESULTS ENDPOINTS
