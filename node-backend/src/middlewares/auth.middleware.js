@@ -41,7 +41,7 @@ export { verifyJWT };
   httpOnly: true,
   secure: true,
   sameSite: "none",
-  domain: ".cronaweb.me",
+
   maxAge: 7 * 24 * 60 * 60 * 1000
 }
 
