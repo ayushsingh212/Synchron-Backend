@@ -736,7 +736,7 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
     withCredentials: true,
   });
 
-  const gaData = response?.data?.data;
+  const gaData = response?.data;
  
     console.log("Here is this coming from flask ",gaData)
   if (!gaData || !Array.isArray(gaData.solutions) || gaData.solutions.length === 0) {
