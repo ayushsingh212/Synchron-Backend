@@ -54,7 +54,7 @@ router.get("/sectionTimeTable/getSpecific",getSectionTimeTablesForSpecific);
 
 
 router.get("/solutions",getGeneratedSolutions);
-router.get("solutions/:id",getGeneratedSolutionById);
+router.get("/solutions/:id",getGeneratedSolutionById);
 router.post("/solutions/approve",approveGeneratedSolution)
 
 
