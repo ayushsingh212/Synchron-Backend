@@ -8,16 +8,6 @@ const resetPassword = async (req, res) => {
      const otpToken = req.cookies.otpToken;
     const {newPassword,confirmNewPassword} = req.body;
   
-
-
-
-
-
-
-
-
-
-
    if(!otpToken)
    {
     throw new ApiError(400,"You are not authorized to change password")

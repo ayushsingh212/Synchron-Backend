@@ -146,7 +146,7 @@ export const checkOtp = asyncHandler(async (req, res) => {
       {
         expiresIn: process.env.OTP_TOKEN_EXPIRY,
       }
-    ))
+    ),options)
 
 
  }
