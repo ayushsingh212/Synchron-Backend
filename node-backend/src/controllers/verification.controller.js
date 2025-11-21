@@ -109,7 +109,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
     .status(202)
     .json(new ApiResponse(200, {}, "OTP has been sent successfully"));
 });
-
+  
 
 
 
