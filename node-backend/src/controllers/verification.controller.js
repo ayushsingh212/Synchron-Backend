@@ -138,7 +138,7 @@ export const checkOtp = asyncHandler(async (req, res) => {
 
   res.cookie("otpToken", jwt.sign(
       {
-        _id: this._id,
+        _id: organisation._id,
         organisationEmail: organisation.organisationEmail,
         organisationName: organisation.organisationName,
       },
