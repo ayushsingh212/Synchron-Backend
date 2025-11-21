@@ -6,6 +6,7 @@ import bcrypt from "bcrypt";
 import { sendEmail } from "../utils/sendMail.js";
 import { Organisation } from "../models/organisation.model.js";
 import jwt from "jsonwebtoken"
+import { options } from "../middlewares/auth.middleware.js";
 
 const OTP_EXPIRY = 2 * 60; 
 const RATE_LIMIT = 10;    
