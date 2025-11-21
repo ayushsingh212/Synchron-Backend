@@ -11,7 +11,7 @@ const organisationSchema = new Schema(
       trim: true,
       required: true,
       lowercase: true,
-      maxLength:100
+      maxLength: 100,
     },
     organisationEmail: {
       type: String,
@@ -19,27 +19,35 @@ const organisationSchema = new Schema(
       index: true,
       lowercase: true,
       required: true,
-      maxLength:50
+      maxLength: 50,
     },
-    isEmailVerified:{
-      type:Boolean,
-      required:true,
-      default:false
+    isEmailVerified: {
+      type: Boolean,
+      required: true,
+      default: false,
     },
     organisationContactNumber: {
       type: String,
       unique: true,
       required: true,
-      maxLength:10
+      maxLength: 10,
     },
     password: {
       type: String,
       trim: true,
       required: true,
-      select:false
+      select: false,
     },
     avatar: {
       type: String,
+    },
+    otp: {
+      type: String,
+      default: null,
+    },
+    otpExpiry: {
+      type: Date,
+      default: null,
     },
   },
   { timestamps: true }
@@ -73,13 +81,9 @@ organisationSchema.methods.generateAccessToken = function () {
 
 // JWT: Refresh Token
 organisationSchema.methods.generateRefreshToken = function () {
-  return jwt.sign(
-    { _id: this._id },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
-  );
+  return jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
+    expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+  });
 };
 
 // Plugins
