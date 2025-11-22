@@ -8,6 +8,7 @@ import timeslotRoutes from "./timeslot.routes.js";
 import timetableRoutes from "./timetable.routes.js";
 import verificationRoutes from "./verification.routes.js";
 import passwordResetRoutes from "./passwordReset.routes.js";
+import chatRoutes from "./chat.routes.js"
 import { Router } from "express";
 
 const router = Router();
@@ -22,5 +23,5 @@ router.use("/timeslot", timeslotRoutes);
 router.use("/timetable", timetableRoutes);
 router.use("/verification", verificationRoutes);
 router.use("/password-reset", passwordResetRoutes);
-
+router.use("/chatbot",chatRoutes)
 export default router;

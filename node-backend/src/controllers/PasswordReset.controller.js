@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import { Organisation } from "../models/organisation.model.js";
 import ApiError from "../utils/apiError.js";
+import ApiResponse from "../utils/apiResponse.js";
 
 
 const resetPassword = async (req, res) => {
@@ -35,7 +36,9 @@ const resetPassword = async (req, res) => {
     await organisation.save();
     
 
-    return res.status(200).json({ message: "Password reset successful" });
+    return res.status(200).json(
+      new ApiResponse(200,{},"Password successfully reset")
+    )
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
