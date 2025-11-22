@@ -1,13 +1,16 @@
 import asyncHandler from "../utils/asyncHandler.js";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Use correct model name
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+import axios from "axios";
 
 export const chatBot = asyncHandler(async (req, res) => {
   const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ 
+      reply: "Please provide a message." 
+    });
+  }
+
+
 
   try {
     const prompt =
@@ -27,12 +30,23 @@ export const chatBot = asyncHandler(async (req, res) => {
       "You explain any part of the platform clearly, help troubleshoot steps, guide the user through features, and assist with tasks like generating PDFs when they provide information.\n\n" +
       "User message: " + message;
 
-    const result = await model.generateContent(prompt);
-    const reply = result.response.text();
+    // Try v1 API with gemini-1.5-flash-latest
+    const url =  process.env.GEMINI_URL
+    const response = await axios.post(url,
+      {
+        contents: [{
+          parts: [{ text: prompt }]
+        }]
+      }
+    );
 
+    const reply = response.data.candidates[0].content.parts[0].text;
     res.json({ reply });
   } catch (err) {
-    console.error(err);
-    res.json({ reply: "Something went wrong. Please try again." });
+    console.error("Gemini API Error:", err.response?.data || err.message);
+    res.status(500).json({ 
+      reply: "Something went wrong. Please try again.",
+      error: err.response?.data?.error?.message || err.message
+    });
   }
 });
