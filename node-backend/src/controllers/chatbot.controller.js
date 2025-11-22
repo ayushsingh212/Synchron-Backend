@@ -5,6 +5,8 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
+
+
 export const chatBot = asyncHandler(async (req, res) => {
   const { message } = req.body;
 
