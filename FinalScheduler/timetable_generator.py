@@ -362,12 +362,12 @@ class TimetableData:
     def is_faculty_available(self, faculty_id: str, day: int, period: int) -> bool:
         # Special marker for missing faculty - always available
         if faculty_id == "NO FACULTY FOUND":
-            return True
+            return False
         faculty = self.faculty.get(faculty_id)
         # If faculty is not present in the config, treat as available
         # This avoids blocking assignments when an unknown id appears in events
         if not faculty:
-            return True
+            return False
         unavailable_periods = faculty.get('unavailable_periods', [])
         for unavailable in unavailable_periods:
             if unavailable.get('day') == day and unavailable.get('period') == period:
