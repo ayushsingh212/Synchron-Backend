@@ -5,7 +5,7 @@ import jwt from "jsonwebtoken";
 import { Timetable } from "../models/timetable.model.js";
 import { TimetableRequest } from "../models/timetableRequest.model.js"; 
 import crypto from "crypto";
-import OrganisationData from "./organisationData.controllers.js"
+import {OrganisationData} from "../models/organisationData.model.js"
 import {sendEmail} from "../utils/sendMail.js"; // utility function to send email
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiError from "../utils/apiError.js";
