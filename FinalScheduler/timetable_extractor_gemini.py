@@ -234,14 +234,15 @@ You are an expert university data extractor. Your task is to analyze the provide
 1. Look for time slots (periods) - extract start/end times EXACTLY as shown in the document
 2. DO NOT modify, add, or remove time periods
 3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
-4. Find all subjects mentioned - create subject IDs and names
+4. Find all subjects and lab mentioned - create subject IDs and LAB IDs and their names
 5. Identify faculty names - generate faculty IDs (F001, F002, etc.)
 6. Extract section names - create section IDs
 7. Find room information - create room IDs
 8. Map subjects to faculty based on timetable assignments
 9. Infer department information from section names
 10. Create appropriate constraints based on what's in the document
-11. Don't use ... to skip parts, use proper delimiters
+11. Add lab IDs in subjects too.
+12. Don't use ... to skip parts, use proper delimiters
 
 ## CRITICAL INSTRUCTIONS FOR TIME SLOTS:
 - Extract ONLY the periods that are explicitly defined in the document
