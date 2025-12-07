@@ -41,7 +41,7 @@ year:{
     working_days: [{ type: String, minlength: 3, maxlength: 15 }],
     break_periods: [Number],
     lunch_period: Number,
-    mentorship_period: Number
+
   },
 
   departments: [
