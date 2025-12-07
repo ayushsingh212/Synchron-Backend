@@ -8,9 +8,8 @@ dotenv.config();
 console.log("AWS_S3_ID:", process.env.AWS_S3_ID);
 console.log("AWS_SECRET:", process.env.AWS_SECRET);
    
-const AWS_S3_ID="AKIAY27STOW7JVJUF4ES"
-const AWS_SECRET="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"
-const AWS_REGION="ap-south-1"
+
+const {AWS_S3_ID,AWS_SECRET,AWS_REGION} = process.env
 AWS.config.update({
   accessKeyId: AWS_S3_ID,
   secretAccessKey: AWS_SECRET,
