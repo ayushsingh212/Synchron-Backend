@@ -12,4 +12,3 @@ numpy
 requests
 reportlab
 pymongo
-readline
