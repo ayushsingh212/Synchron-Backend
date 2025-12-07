@@ -19,7 +19,8 @@ const allotedFacSchema = new mongoose.Schema({
     type:String,
     trim:true,
   }
-  
+   
+
 
 },{
 
