@@ -5,8 +5,7 @@ import dotenv from "dotenv";
 import  ApiError  from "./apiError.js";
 import mime from "mime-types";
 dotenv.config();
-console.log("AWS_S3_ID:", process.env.AWS_S3_ID);
-console.log("AWS_SECRET:", process.env.AWS_SECRET);
+
    
 
 const {AWS_S3_ID,AWS_SECRET,AWS_REGION} = process.env
