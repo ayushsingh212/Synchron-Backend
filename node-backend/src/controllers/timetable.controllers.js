@@ -4,7 +4,7 @@ import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import path from "path";
-import fs from "fs"
+import fs from "fs";
 import { SectionTimetable } from "../models/sectionTimetable.model.js";
 import FormData from "form-data";
 import { OrganisationData } from "../models/organisationData.model.js";
@@ -15,56 +15,38 @@ import { GeneratedSolution } from "../models/generatedSolution.model.js";
 
 const { FLASK_URL } = process.env;
 
-
-
 export const getTheDynamicResult = asyncHandler(async (req, res) => {
+  console.log("The result is going to be send");
 
-
-  console.log("The result is going to be send")
-
-
-  const flaskRes = await axios.post("")
-
-
-
-})
+  const flaskRes = await axios.post("");
+});
 let c = 1;
 export const generateByGivingData = asyncHandler(async (req, res) => {
-
   console.log("I am working manual data", c);
   c++;
-
 
   const parsed_config = req.body;
 
   // console.log( "I am the coming parsed config",  parsed_config)
 
-
   if (!parsed_config) {
-    throw new ApiError(404, "Please provide the input for the generation")
+    throw new ApiError(404, "Please provide the input for the generation");
   }
-
 
   // const sendingTheData = await axios.post(`http://localhost:8080/api/timetable/sendData`,parsed_config,{
   //   withCredentials:true
   // })
 
-
-
   // if (!sendingTheData) {
   //   throw new ApiError(500, "Sorry our model is busy")
   // }
 
-
-  return res.status(202).json(
-    new ApiResponse(202, {}, "Sent for Generation")
-  )
-})
+  return res.status(202).json(new ApiResponse(202, {}, "Sent for Generation"));
+});
 
 export const getInfoPdf = async (req, res) => {
   try {
     const pdfPath = req.file.path;
-
 
     const formData = new FormData();
     formData.append("file", fs.createReadStream(pdfPath));
@@ -81,7 +63,7 @@ export const getInfoPdf = async (req, res) => {
 
     fs.unlink(pdfPath, (err) => {
       if (err) {
-        console.log("Error while deleting the pdf", err)
+        console.log("Error while deleting the pdf", err);
       }
     });
 
@@ -91,20 +73,15 @@ export const getInfoPdf = async (req, res) => {
       extractionInfo: flaskRes.data.extraction_info || {},
     });
   } catch (err) {
-
     fs.unlink(pdfPath, (err) => {
       if (err) {
-        console.log("Error while deleting the pdf", err)
+        console.log("Error while deleting the pdf", err);
       }
     });
     console.error("PDF upload error:", err.response?.data || err.message);
     res.status(500).json({ success: false, error: "PDF processing failed" });
   }
 };
-
-
-
-
 
 /**
  * Trigger timetable generation in Flask (background)
@@ -320,8 +297,6 @@ export const getInfoPdf = async (req, res) => {
 //     }
 //   };
 
-
-
 //   console.log("Here is the going to send to model")
 
 //   const response = await axios.post(`${FLASK_URL}/api/generate`, transformedData, {
@@ -401,8 +376,6 @@ export const getInfoPdf = async (req, res) => {
 
 // });
 
-
-
 export const startTimeTableCreation = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
@@ -427,13 +400,15 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   });
 
   if (!organisationData) {
-    return res.status(404).json(
-      new ApiResponse(
-        404,
-        null,
-        "Organisation data not found for this course/year/semester"
-      )
-    );
+    return res
+      .status(404)
+      .json(
+        new ApiResponse(
+          404,
+          null,
+          "Organisation data not found for this course/year/semester"
+        )
+      );
   }
 
   const transformedData = {
@@ -455,8 +430,6 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       working_days: organisationData.time_slots?.working_days || [],
       break_periods: organisationData.time_slots?.break_periods || [],
       lunch_period: organisationData.time_slots?.lunch_period || null,
-      mentorship_period:
-        organisationData.time_slots?.mentorship_period || null,
     },
     departments: (organisationData.departments || []).map((dept) => ({
       dept_id: dept.dept_id,
@@ -528,8 +501,7 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
           organisationData.constraints?.hard_constraints?.no_faculty_clash ??
           true,
         no_room_clash:
-          organisationData.constraints?.hard_constraints?.no_room_clash ??
-          true,
+          organisationData.constraints?.hard_constraints?.no_room_clash ?? true,
         no_section_clash:
           organisationData.constraints?.hard_constraints?.no_section_clash ??
           true,
@@ -670,9 +642,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
         max_students_per_batch:
           organisationData.special_requirements?.lab_batch_division
             ?.max_students_per_batch || 15,
-        batch_naming:
-          organisationData.special_requirements?.lab_batch_division
-            ?.batch_naming || ["A", "B", "C", "D"],
+        batch_naming: organisationData.special_requirements?.lab_batch_division
+          ?.batch_naming || ["A", "B", "C", "D"],
         rotation_labs:
           organisationData.special_requirements?.lab_batch_division
             ?.rotation_labs || [],
@@ -681,7 +652,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
     genetic_algorithm_params: {
       population_size:
         organisationData.genetic_algorithm_params?.population_size || 50,
-      generations: organisationData.genetic_algorithm_params?.generations || 200,
+      generations:
+        organisationData.genetic_algorithm_params?.generations || 200,
       mutation_rate:
         organisationData.genetic_algorithm_params?.mutation_rate || 0.2,
       crossover_rate:
@@ -732,14 +704,22 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
     },
   };
 
-  const response = await axios.post(`${FLASK_URL}/api/generate`, transformedData, {
-    withCredentials: true,
-  });
+  const response = await axios.post(
+    `${FLASK_URL}/api/generate`,
+    transformedData,
+    {
+      withCredentials: true,
+    }
+  );
 
   const gaData = response?.data;
- 
-    console.log("Here is this coming from flask ",gaData)
-  if (!gaData || !Array.isArray(gaData.solutions) || gaData.solutions.length === 0) {
+
+  console.log("Here is this coming from flask ", gaData);
+  if (
+    !gaData ||
+    !Array.isArray(gaData.solutions) ||
+    gaData.solutions.length === 0
+  ) {
     throw new ApiError(500, "Model did not return any solutions");
   }
 
@@ -792,18 +772,13 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
   );
 });
 
-
-
-
-
 export const checkGenerationStatus = asyncHandler(async (req, res) => {
   const response = await axios.get(`${FLASK_URL}/api/status`);
-  if (!response || !response.data) throw new ApiError(500, "Failed to fetch status");
+  if (!response || !response.data)
+    throw new ApiError(500, "Failed to fetch status");
 
   return res.json(new ApiResponse(200, response.data, "Status fetched"));
 });
-
-
 
 export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
   try {
@@ -823,14 +798,15 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
 
     const grouped = {};
 
-    docs.forEach(doc => {
+    docs.forEach((doc) => {
       const { _id, __v, createdAt, updatedAt, ...clean } = doc;
 
       const { course, year, semester, section_id } = clean;
 
       if (!grouped[course]) grouped[course] = {};
       if (!grouped[course][year]) grouped[course][year] = {};
-      if (!grouped[course][year][semester]) grouped[course][year][semester] = {};
+      if (!grouped[course][year][semester])
+        grouped[course][year][semester] = {};
 
       grouped[course][year][semester][section_id] = clean;
     });
@@ -838,28 +814,25 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
     return res.json(
       new ApiResponse(200, grouped, "Section timetables fetched successfully")
     );
-
   } catch (error) {
     console.error("Unexpected error in getSectionTimeTables:", error);
 
-    return res
-      .status(500)
-      .json(new ApiError(500, "Internal server error"));
+    return res.status(500).json(new ApiError(500, "Internal server error"));
   }
 });
 
-
-
-
-
 export const getSingleSectionTimeTable = asyncHandler(async (req, res) => {
   const { section_id } = req.params;
-  const response = await axios.get(`${FLASK_URL}/api/timetables/sections/${section_id}`);
-  if (!response || !response.data) throw new ApiError(404, "Section timetable not found");
+  const response = await axios.get(
+    `${FLASK_URL}/api/timetables/sections/${section_id}`
+  );
+  if (!response || !response.data)
+    throw new ApiError(404, "Section timetable not found");
 
-  return res.json(new ApiResponse(200, response, `Section ${section_id} timetable fetched`));
+  return res.json(
+    new ApiResponse(200, response, `Section ${section_id} timetable fetched`)
+  );
 });
-
 
 export const getFacultyTimeTables = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
@@ -876,7 +849,7 @@ export const getFacultyTimeTables = asyncHandler(async (req, res) => {
 
   const grouped = {};
 
-  docs.forEach(doc => {
+  docs.forEach((doc) => {
     const {
       _id,
       __v,
@@ -895,42 +868,41 @@ export const getFacultyTimeTables = asyncHandler(async (req, res) => {
     grouped[course][year][semester][faculty_id] = clean;
   });
 
-  return res.status(200).json(
-    new ApiResponse(200, grouped, "Faculty timetables fetched successfully")
-  );
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, grouped, "Faculty timetables fetched successfully")
+    );
 });
 
-
 const getAllGeneratedSectionTimeTables = asyncHandler(async (req, res) => {
-
   const organisationId = req.organisation_id;
-
 
   const sectionTimeTables = await SectionTimetable.find({ organisationId });
 
-
   if (sectionTimeTables.length === 0) {
-    throw new ApiError(400, "No section TimTables yet")
+    throw new ApiError(400, "No section TimTables yet");
   }
 
-
-  return res.status(200).json(
-    new ApiResponse(200, sectionTimeTables, "Section TimeTable fetched successfully")
-  )
-
-})
-
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        sectionTimeTables,
+        "Section TimeTable fetched successfully"
+      )
+    );
+});
 
 export const updateFacultyTimetable = asyncHandler(async (req, res) => {
   console.log("I have been hit - updateFacultyTimetable");
-
 
   const organisationId = req.organisation?._id;
   const { faculty_id } = req.body;
   const updateData = req.body;
 
   try {
-
     if (!faculty_id) {
       throw new ApiError(400, "Faculty ID is required");
     }
@@ -950,13 +922,13 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
     const updatedFaculty = await FacultyTimetable.findOneAndUpdate(
       {
         faculty_id,
-        organisationId
+        organisationId,
       },
       updateData,
       {
         new: true, // Return the updated document
         runValidators: true, // Run schema validators
-        context: 'query' // Ensure validators work with update
+        context: "query", // Ensure validators work with update
       }
     ).lean();
 
@@ -966,10 +938,15 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
 
     console.log(`Faculty timetable updated for ID: ${faculty_id}`);
 
-    return res.status(200).json(
-      new ApiResponse(200, updatedFaculty, "Faculty timetable updated successfully")
-    );
-
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          updatedFaculty,
+          "Faculty timetable updated successfully"
+        )
+      );
   } catch (error) {
     console.error("Error in updateFacultyTimetable:", error);
 
@@ -978,31 +955,41 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
     }
 
     // Handle MongoDB validation errors
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      throw new ApiError(400, `Validation error: ${errors.join(', ')}`);
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      throw new ApiError(400, `Validation error: ${errors.join(", ")}`);
     }
 
     // Handle cast errors (invalid ID format)
-    if (error.name === 'CastError') {
+    if (error.name === "CastError") {
       throw new ApiError(400, "Invalid faculty ID format");
     }
 
-    throw new ApiError(500, "Internal server error while updating faculty timetable");
+    throw new ApiError(
+      500,
+      "Internal server error while updating faculty timetable"
+    );
   }
 });
-
-
 
 /**
  * Get single faculty timetable by ID
  */
 export const getSingleFacultyTimeTable = asyncHandler(async (req, res) => {
   const { faculty_id } = req.params;
-  const response = await axios.get(`${FLASK_URL}/api/timetables/faculty/${faculty_id}`);
-  if (!response || !response.data) throw new ApiError(404, "Faculty timetable not found");
+  const response = await axios.get(
+    `${FLASK_URL}/api/timetables/faculty/${faculty_id}`
+  );
+  if (!response || !response.data)
+    throw new ApiError(404, "Faculty timetable not found");
 
-  return res.json(new ApiResponse(200, response.data, `Faculty ${faculty_id} timetable fetched`));
+  return res.json(
+    new ApiResponse(
+      200,
+      response.data,
+      `Faculty ${faculty_id} timetable fetched`
+    )
+  );
 });
 
 /**
@@ -1010,12 +997,13 @@ export const getSingleFacultyTimeTable = asyncHandler(async (req, res) => {
  */
 export const getDetailedTimeTable = asyncHandler(async (req, res) => {
   const response = await axios.get(`${FLASK_URL}/api/timetables/detailed`);
-  if (!response || !response.data) throw new ApiError(404, "Detailed timetable not found");
+  if (!response || !response.data)
+    throw new ApiError(404, "Detailed timetable not found");
 
-  return res.json(new ApiResponse(200, response.data, "Detailed timetable fetched"));
+  return res.json(
+    new ApiResponse(200, response.data, "Detailed timetable fetched")
+  );
 });
-
-
 
 export const getFacultyTimetablesByGroup = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
@@ -1031,7 +1019,7 @@ export const getFacultyTimetablesByGroup = asyncHandler(async (req, res) => {
     organisationId,
     course: course.toLowerCase(),
     year: year.toLowerCase(),
-    semester: semester.toLowerCase()
+    semester: semester.toLowerCase(),
   })
     .select("-_id -__v -createdAt -updatedAt -organisationId")
     .lean();
@@ -1044,23 +1032,27 @@ export const getFacultyTimetablesByGroup = asyncHandler(async (req, res) => {
   // { faculty_id: { faculty_name, department, periods, timetable, ... } }
   const result = {};
 
-  docs.forEach(doc => {
+  docs.forEach((doc) => {
     result[doc.faculty_id] = {
       faculty_id: doc.faculty_id,
       faculty_name: doc.faculty_name,
       department: doc.department,
       periods: doc.periods,
-      timetable: doc.timetable
+      timetable: doc.timetable,
     };
   });
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      course: course.toLowerCase(),
-      year: year.toLowerCase(),
-      semester: semester.toLowerCase(),
-      faculty: result
-    }, "Faculty timetables fetched")
+    new ApiResponse(
+      200,
+      {
+        course: course.toLowerCase(),
+        year: year.toLowerCase(),
+        semester: semester.toLowerCase(),
+        faculty: result,
+      },
+      "Faculty timetables fetched"
+    )
   );
 });
 export const getSectionTimetablesByGroup = asyncHandler(async (req, res) => {
@@ -1077,7 +1069,7 @@ export const getSectionTimetablesByGroup = asyncHandler(async (req, res) => {
     organisationId,
     course: course.toLowerCase(),
     year: year.toLowerCase(),
-    semester: semester.toLowerCase()
+    semester: semester.toLowerCase(),
   })
     .select("-_id -__v -createdAt -updatedAt -organisationId")
     .lean();
@@ -1090,136 +1082,144 @@ export const getSectionTimetablesByGroup = asyncHandler(async (req, res) => {
   // { section_id: { section_name, periods, timetable, ... } }
   const result = {};
 
-  docs.forEach(doc => {
+  docs.forEach((doc) => {
     result[doc.section_id] = {
       section_id: doc.section_id,
       section_name: doc.section_name,
       specialization: doc.specialization,
       periods: doc.periods,
-      timetable: doc.timetable
+      timetable: doc.timetable,
     };
   });
 
   return res.status(200).json(
-    new ApiResponse(200, {
-      course: course.toLowerCase(),
-      year: year.toLowerCase(),
-      semester: semester.toLowerCase(),
-      sections: result
-    }, "Section timetables fetched")
-  );
-});
-
-export const getFacultyTimeTablesForSpecific = asyncHandler(async (req, res) => {
-  const organisationId = req.organisation?._id;
-  const { course, year, semester } = req.query;
-  
-  console.log("here are the coming things",course,year,semester)
-  if (!organisationId) {
-    throw new ApiError(401, "Login first");
-  }
-
-  if (!course || !year || !semester) {
-    throw new ApiError(400, "Course, year, and semester are required");
-  }
-
-  const docs = await FacultyTimetable.find({
-    organisationId,
-    course: course.toLowerCase().trim(),
-    year: year.toLowerCase().trim(),
-    semester: semester.toLowerCase().trim()
-  }).lean();
-
-  console.log("Here is the docs",docs)
-
-  if (!docs || docs.length === 0) {
-    throw new ApiError(404, "No faculty timetables found");
-  }
-
-  const result = {};
-
-  docs.forEach(doc => {
-    const {
-      _id,
-      __v,
-      createdAt,
-      updatedAt,
-      organisationId: org,
-      ...cleanDoc
-    } = doc;
-
-    result[doc.faculty_id] = cleanDoc;
-  });
-
-  return res.status(200).json(
     new ApiResponse(
       200,
       {
         course: course.toLowerCase(),
         year: year.toLowerCase(),
         semester: semester.toLowerCase(),
-        faculty: result
+        sections: result,
       },
-      "Faculty timetables fetched successfully"
+      "Section timetables fetched"
     )
   );
 });
-export const getSectionTimeTablesForSpecific = asyncHandler(async (req, res) => {
-  const organisationId = req.organisation?._id;
-  const { course, year, semester } = req.query;
 
-  console.log("Section params received:", course, year, semester);
+export const getFacultyTimeTablesForSpecific = asyncHandler(
+  async (req, res) => {
+    const organisationId = req.organisation?._id;
+    const { course, year, semester } = req.query;
 
-  if (!organisationId) {
-    throw new ApiError(401, "Login first");
+    console.log("here are the coming things", course, year, semester);
+    if (!organisationId) {
+      throw new ApiError(401, "Login first");
+    }
+
+    if (!course || !year || !semester) {
+      throw new ApiError(400, "Course, year, and semester are required");
+    }
+
+    const docs = await FacultyTimetable.find({
+      organisationId,
+      course: course.toLowerCase().trim(),
+      year: year.toLowerCase().trim(),
+      semester: semester.toLowerCase().trim(),
+    }).lean();
+
+    console.log("Here is the docs", docs);
+
+    if (!docs || docs.length === 0) {
+      throw new ApiError(404, "No faculty timetables found");
+    }
+
+    const result = {};
+
+    docs.forEach((doc) => {
+      const {
+        _id,
+        __v,
+        createdAt,
+        updatedAt,
+        organisationId: org,
+        ...cleanDoc
+      } = doc;
+
+      result[doc.faculty_id] = cleanDoc;
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          course: course.toLowerCase(),
+          year: year.toLowerCase(),
+          semester: semester.toLowerCase(),
+          faculty: result,
+        },
+        "Faculty timetables fetched successfully"
+      )
+    );
   }
+);
+export const getSectionTimeTablesForSpecific = asyncHandler(
+  async (req, res) => {
+    const organisationId = req.organisation?._id;
+    const { course, year, semester } = req.query;
 
-  if (!course || !year || !semester) {
-    throw new ApiError(400, "Course, year, and semester are required");
+    console.log("Section params received:", course, year, semester);
+
+    if (!organisationId) {
+      throw new ApiError(401, "Login first");
+    }
+
+    if (!course || !year || !semester) {
+      throw new ApiError(400, "Course, year, and semester are required");
+    }
+
+    const docs = await SectionTimetable.find({
+      organisationId,
+      course: course.toLowerCase().trim(),
+      year: year.toLowerCase().trim(),
+      semester: semester.toLowerCase().trim(),
+    }).lean();
+
+    console.log("Section docs fetched:", docs);
+
+    if (!docs || docs.length === 0) {
+      throw new ApiError(404, "No section timetables found");
+    }
+
+    const result = {};
+
+    docs.forEach((doc) => {
+      const {
+        _id,
+        __v,
+        createdAt,
+        updatedAt,
+        organisationId: org,
+        ...cleanDoc
+      } = doc;
+
+      // store using section_id as key
+      result[doc.section_id] = cleanDoc;
+    });
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        {
+          course: course.toLowerCase(),
+          year: year.toLowerCase(),
+          semester: semester.toLowerCase(),
+          sections: result,
+        },
+        "Section timetables fetched successfully"
+      )
+    );
   }
-
-  const docs = await SectionTimetable.find({
-    organisationId,
-    course: course.toLowerCase().trim(),
-    year: year.toLowerCase().trim(),
-    semester: semester.toLowerCase().trim()
-  }).lean();
-
-  console.log("Section docs fetched:", docs);
-
-  if (!docs || docs.length === 0) {
-    throw new ApiError(404, "No section timetables found");
-  }
-
-  const result = {};
-
-  docs.forEach(doc => {
-    const {
-      _id,
-      __v,
-      createdAt,
-      updatedAt,
-      organisationId: org,
-      ...cleanDoc
-    } = doc;
-
-    // store using section_id as key
-    result[doc.section_id] = cleanDoc;
-  });
-
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        course: course.toLowerCase(),
-        year: year.toLowerCase(),
-        semester: semester.toLowerCase(),
-        sections: result
-      },
-      "Section timetables fetched successfully"
-    )
-  );
-});
+);
 export const getGeneratedSolutions = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
@@ -1336,14 +1336,14 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
   const sectionArr = Object.values(sections || {});
 
   if (sectionArr.length > 0) {
-    const sectionOps = sectionArr.map(sec => ({
+    const sectionOps = sectionArr.map((sec) => ({
       updateOne: {
         filter: {
           organisationId,
           course,
           year,
           semester,
-          section_id: sec.section_id
+          section_id: sec.section_id,
         },
         update: {
           $set: {
@@ -1355,11 +1355,11 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
             section_name: sec.section_name || "",
             specialization: sec.specialization || "",
             periods: sec.periods || {},
-            timetable: sec.timetable || {}
-          }
+            timetable: sec.timetable || {},
+          },
         },
-        upsert: true
-      }
+        upsert: true,
+      },
     }));
 
     await SectionTimetable.bulkWrite(sectionOps, { ordered: false });
@@ -1373,14 +1373,14 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
   const facultyArr = faculty ? Object.values(faculty) : [];
 
   if (facultyArr.length > 0) {
-    const facultyOps = facultyArr.map(f => ({
+    const facultyOps = facultyArr.map((f) => ({
       updateOne: {
         filter: {
           organisationId,
           course,
           year,
           semester,
-          faculty_id: f.faculty_id
+          faculty_id: f.faculty_id,
         },
         update: {
           $set: {
@@ -1389,14 +1389,14 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
             year,
             semester,
             faculty_id: f.faculty_id,
-            faculty_name: f.faculty_name,           // REQUIRED
-            department: f.department,               // REQUIRED
-            periods: f.periods || {},               // Map { "1": "08:00-08:50", ... }
-            timetable: f.timetable || {}            // Map { "Monday": {...}, "Tuesday": {...} }
-          }
+            faculty_name: f.faculty_name, // REQUIRED
+            department: f.department, // REQUIRED
+            periods: f.periods || {}, // Map { "1": "08:00-08:50", ... }
+            timetable: f.timetable || {}, // Map { "Monday": {...}, "Tuesday": {...} }
+          },
         },
-        upsert: true
-      }
+        upsert: true,
+      },
     }));
 
     await FacultyTimetable.bulkWrite(facultyOps, { ordered: false });
@@ -1425,10 +1425,9 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
         course,
         year,
         semester,
-        approvedSolution: sol._id
+        approvedSolution: sol._id,
       },
       "Selected timetable variant approved & saved successfully"
     )
   );
 });
-
