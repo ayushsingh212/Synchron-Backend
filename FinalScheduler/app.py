@@ -12,6 +12,8 @@ import os
 from dotenv import load_dotenv
 import tempfile
 from pathlib import Path
+from nlp_processor import TimetableNLPProcessor
+from db_utils import get_config_by_params
 
 # =============================================================================
 # CONFIGURATION & SETUP
@@ -84,6 +86,11 @@ class DynamicUpdateRequest(BaseModel):
     """Request model for dynamic updates with events"""
     events: List[Dict[str, Any]] = []
     config: Optional[Dict[str, Any]] = None
+    # New fields for Database Fetching
+    course: Optional[str] = None
+    year: Optional[str] = None
+    semester: Optional[str] = None
+    organisation_id: Optional[str] = None
 
 class StatusResponse(BaseModel):
     """Response model for status endpoint"""
@@ -93,6 +100,14 @@ class StatusResponse(BaseModel):
     has_parsed_config: bool
     has_results: bool
     llm_backend: str
+
+class NLPRequest(BaseModel):
+    """Model for the raw JSON POST body to the NLP endpoint."""
+    text: str = Field(..., description="The natural language text describing constraints or events.")
+    course: str = Field(..., description="Course Name (e.g., b.tech)")
+    year: str = Field(..., description="Year (e.g., 2nd)")
+    semester: str = Field(..., description="Semester (e.g., 3rd)")
+    organisation_id: Optional[str] = Field(None, description="The MongoDB ObjectId of the Organisation")
 
 # =============================================================================
 # ULTRA-FAST LLM EXTRACTOR SETUP WITH CEREBRAS + GEMINI FALLBACK
@@ -137,7 +152,6 @@ if not llm_extractor:
 # Import timetable modules
 try:
     from timetable_generator import GeneticAlgorithm, TimetableData, TimetableExporter
-    from dynamic_updater import DynamicUpdater
 except ImportError as e:
     logger.error(f"Failed to import timetable modules: {e}")
 
@@ -236,67 +250,107 @@ async def generate_timetables_async(config_data: Optional[Dict] = None):
 
 def apply_events_to_config(config: Dict, events: List[Dict]) -> Dict:
     """
-    Apply event constraints to configuration by marking unavailable resources
-    Returns modified config with unavailable_periods for affected faculty/rooms
+    Apply event constraints:
+    1. Faculty Absence -> Add to faculty['unavailable_periods']
+    2. Room Unavailable -> Add to rooms['unavailable_periods']
+    3. Section Unavailable -> (NEW) Add to sections['unavailable_periods'] (requires GA support) or strictly block slots
+    4. Force Assignment -> (NEW) Add to 'fixed_assignments' in special_requirements
     """
     modified_config = deepcopy(config)
+    
+    # Ensure helper structures exist
+    if 'special_requirements' not in modified_config:
+        modified_config['special_requirements'] = {}
+    if 'fixed_assignments' not in modified_config['special_requirements']:
+        modified_config['special_requirements']['fixed_assignments'] = []
+
     day_mapping = {day: idx for idx, day in enumerate(modified_config.get('time_slots', {}).get('working_days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']))}
     
     for event in events:
         event_type = event.get('type')
         start_day = event.get('start_day')
         end_day = event.get('end_day')
-        timeslots = event.get('timeslots')  # None means all timeslots
+        timeslots = event.get('timeslots') # None means all day
         
-        # Get day range
-        start_idx = day_mapping.get(start_day, 0)
-        end_idx = day_mapping.get(end_day, len(day_mapping) - 1)
-        day_range = list(range(start_idx, end_idx + 1))
-        
-        if event_type == 'faculty_absence':
-            faculty_id = event.get('faculty_id')
-            if faculty_id:
-                # Find and mark faculty as unavailable
-                for faculty in modified_config.get('faculty', []):
-                    if faculty.get('faculty_id') == faculty_id:
-                        if 'unavailable_periods' not in faculty:
-                            faculty['unavailable_periods'] = []
-                        
-                        if timeslots is None:
-                            # All timeslots unavailable for the day range
-                            periods = modified_config.get('time_slots', {}).get('periods', [])
-                            for day in day_range:
-                                for period in periods:
-                                    period_id = period.get('id')
-                                    faculty['unavailable_periods'].append({'day': day, 'period': period_id})
-                        else:
-                            # Specific timeslots unavailable
-                            for day in day_range:
-                                for period in timeslots:
-                                    faculty['unavailable_periods'].append({'day': day, 'period': period})
-        
-        elif event_type == 'room_unavailable':
-            room_id = event.get('room_id')
-            if room_id:
-                # Find and mark room as unavailable
-                for room in modified_config.get('rooms', []):
-                    if room.get('room_id') == room_id:
-                        if 'unavailable_periods' not in room:
-                            room['unavailable_periods'] = []
-                        
-                        if timeslots is None:
-                            # All timeslots unavailable for the day range
-                            periods = modified_config.get('time_slots', {}).get('periods', [])
-                            for day in day_range:
-                                for period in periods:
-                                    period_id = period.get('id')
-                                    room['unavailable_periods'].append({'day': day, 'period': period_id})
-                        else:
-                            # Specific timeslots unavailable
-                            for day in day_range:
-                                for period in timeslots:
-                                    room['unavailable_periods'].append({'day': day, 'period': period})
-    
+        # Calculate day range indices
+        if start_day and end_day:
+            start_idx = day_mapping.get(start_day, 0)
+            end_idx = day_mapping.get(end_day, len(day_mapping) - 1)
+            day_range = list(range(start_idx, end_idx + 1))
+        else:
+            day_range = []
+
+        # 1. Faculty Absence
+        if event_type in ['faculty_absence', 'faculty_partial_absence']:
+            fid = event.get('faculty_id')
+            # ... (existing faculty logic logic, see below for robust implementation) ...
+            for faculty in modified_config.get('faculty', []):
+                if faculty.get('faculty_id') == fid:
+                    if 'unavailable_periods' not in faculty: faculty['unavailable_periods'] = []
+                    
+                    # Logic: If timeslots is None, block ALL periods for days in range
+                    periods_to_block = timeslots if timeslots else [p['id'] for p in modified_config['time_slots']['periods']]
+                    
+                    for d in day_range:
+                        for p in periods_to_block:
+                            faculty['unavailable_periods'].append({'day': d, 'period': p})
+
+        # 2. Resource/Room Unavailable
+        elif event_type in ['resource_unavailable', 'room_maintenance']:
+            rid = event.get('room_id')
+            for room in modified_config.get('rooms', []):
+                if room.get('room_id') == rid:
+                    if 'unavailable_periods' not in room: room['unavailable_periods'] = []
+                    periods_to_block = timeslots if timeslots else [p['id'] for p in modified_config['time_slots']['periods']]
+                    for d in day_range:
+                        for p in periods_to_block:
+                            room['unavailable_periods'].append({'day': d, 'period': p})
+
+        # 3. Section Unavailable (NEW)
+        elif event_type == 'section_unavailable':
+            sid = event.get('section_id')
+            # We need to find the section and mark unavailable periods.
+            # NOTE: The GeneticAlgorithm/Data needs to respect section['unavailable_periods'].
+            # If your GA doesn't support it yet, we can hack it by adding a dummy hard constraint 
+            # or ensuring the 'is_conflict_free' checks section availability.
+            
+            # Let's add it to the section dict assuming GA updates:
+            found = False
+            # Check department sections
+            for dept in modified_config.get('departments', []):
+                for section in dept.get('sections', []):
+                    if section.get('section_id') == sid:
+                        if 'unavailable_periods' not in section: section['unavailable_periods'] = []
+                        periods_to_block = timeslots if timeslots else [p['id'] for p in modified_config['time_slots']['periods']]
+                        for d in day_range:
+                            for p in periods_to_block:
+                                section['unavailable_periods'].append({'day': d, 'period': p})
+                        found = True
+            
+            # Check loose sections
+            if not found:
+                for section in modified_config.get('sections', []):
+                    if section.get('section_id') == sid:
+                        if 'unavailable_periods' not in section: section['unavailable_periods'] = []
+                        periods_to_block = timeslots if timeslots else [p['id'] for p in modified_config['time_slots']['periods']]
+                        for d in day_range:
+                            for p in periods_to_block:
+                                section['unavailable_periods'].append({'day': d, 'period': p})
+
+        # 4. Force Assignment (NEW)
+        elif event_type == 'force_assignment':
+            # "Dr. Smith, Subject X, Section Y, Mon, P1, [Room Z]"
+            assignment = {
+                "faculty_id": event.get('faculty_id'),
+                "subject_id": event.get('subject_id'),
+                "section_id": event.get('section_id'),
+                "day": day_mapping.get(event.get('day')),
+                "period": event.get('timeslot'),
+                "room_id": event.get('room_id') # Optional
+            }
+            # Add to special_requirements.fixed_assignments
+            modified_config['special_requirements']['fixed_assignments'].append(assignment)
+
     return modified_config
 
 # =============================================================================
@@ -397,6 +451,64 @@ async def parse_timetable(
             status_code=500,
             detail=f'Failed to parse timetable: {str(e)}'
         )
+
+
+@app.post("/api/nlp/parse", status_code=200)
+async def parse_natural_language(
+    request: NLPRequest = Body(...) # Accepts the raw JSON body
+):
+    """
+    Takes natural language text along with context parameters (course, year, semester)
+    and returns structured JSON for events or constraints, validated by Pydantic.
+    """
+    logger.info(f"Received NLP request for {request.course}/{request.year}/{request.semester}")
+    
+    # 1. Load context from MongoDB using request parameters
+    config = get_config_by_params(
+        course=request.course,
+        year=request.year,
+        semester=request.semester,
+        organisation_id=request.organisation_id
+    )
+    
+    if not config:
+        raise HTTPException(
+            status_code=404, 
+            detail=f"Configuration not found in DB for: {request.course}/{request.year}/{request.semester}. Cannot parse entities."
+        )
+
+    # 2. Initialize Processor (LLM API Key check is inside the Processor's __init__)
+    try:
+        processor = TimetableNLPProcessor(config)
+    except EnvironmentError as e:
+        raise HTTPException(status_code=503, detail=f"LLM Processor Error: {e}")
+
+    # 3. Parse and Validate
+    result = processor.parse_request(request.text)
+
+    if "error" in result:
+        # Pydantic validation failure or LLM failure
+        raise HTTPException(status_code=422, detail=result["details"])
+    
+    # -------------------------------------------------------------------------
+    # 4. FIX: Ensure 'config' is JSON-serializable before returning.
+    # The default=str handles non-standard types (like ObjectId, datetime) 
+    # by converting them to strings.
+    try:
+        json_safe_config = json.loads(json.dumps(config, default=str))
+    except Exception as e:
+        logger.error(f"Failed to serialize config for response: {e}")
+        raise HTTPException(status_code=500, detail="Failed to serialize configuration from database.")
+    # -------------------------------------------------------------------------
+
+    # 5. Return structured data
+    return {
+        "status": "success",
+        "interpreted_data": result,
+        "context_source": "database_context",
+        "config": json_safe_config, # <-- Return the JSON-safe version
+        "config_loaded": f"{request.organisation_id}/{request.course}/{request.year}/{request.semester}"
+    }
 
 # =============================================================================
 # TIMETABLE GENERATION ENDPOINTS
@@ -652,60 +764,58 @@ async def regenerate_with_events(
     request: DynamicUpdateRequest = Body(...)
 ):
     """
-    Regenerate timetable with event constraints applied.
-    
-    Events format example:
-    {
-        "events": [
-            {
-                "type": "faculty_absence",
-                "faculty_id": "F001",
-                "start_day": "Monday",
-                "end_day": "Wednesday",
-                "timeslots": null
-            },
-            {
-                "type": "room_unavailable",
-                "room_id": "R001",
-                "start_day": "Tuesday",
-                "end_day": "Tuesday",
-                "timeslots": [2, 3, 4]
-            }
-        ],
-        "config": {...}  #The one given to /api/generate
-    }
-    
-    Returns: Regenerated timetable with constraints applied
+    Regenerate with extended event handling.
+    Prioritizes Config from:
+    1. Request Body (request.config)
+    2. MongoDB (using request.course/year/semester)
+    3. In-Memory Cache (timetable_results)
     """
     try:
-        logger.info(f"Starting synchronous regeneration with {len(request.events)} events")
+        logger.info(f"Regenerating with {len(request.events)} events")
 
-        # Snapshot base configuration (use provided config or last parsed)
-        base_config = request.config or timetable_results.get("parsed_config")
+        # -----------------------------------------------------------------
+        # 1. RESOLVE CONFIGURATION
+        # -----------------------------------------------------------------
+        base_config = request.config
 
-        # Work on a deep copy so original parsed_config is not mutated
-        base_config = deepcopy(base_config)
+        # If not in body, try fetching from Database
+        if not base_config and request.organisation_id and request.course and request.year and request.semester:
+            logger.info(f"Fetching config from DB for {request.organisation_id}/{request.course} / {request.year} / {request.semester}")
+            base_config = get_config_by_params(
+                course=request.course,
+                year=request.year,
+                semester=request.semester,
+                organisation_id=request.organisation_id
+            )
+            if not base_config:
+                logger.warning("Database params provided but no config found.")
 
-        # Apply events to config
-        logger.info("Applying event constraints to configuration")
-        modified_config = apply_events_to_config(base_config, request.events)
+        # If still not found, try the in-memory cache (last parsed file)
+        if not base_config:
+            logger.info("Checking in-memory cache for configuration...")
+            base_config = timetable_results.get("parsed_config")
 
-        # Validate modified config
-        subjects_count = len(modified_config.get('subjects') or [])
-        faculty_count = len(modified_config.get('faculty') or [])
-        rooms_count = len(modified_config.get('rooms') or [])
-        departments_count = len(modified_config.get('departments') or [])
-
-        logger.info(f"Modified config: subjects={subjects_count}, faculty={faculty_count}, rooms={rooms_count}, departments={departments_count}")
-
-        if subjects_count == 0 or faculty_count == 0 or rooms_count == 0 or departments_count == 0:
+        # Final validation
+        if not base_config:
             raise HTTPException(
-                status_code=400,
-                detail="Invalid config: missing required data after applying events"
+                status_code=400, 
+                detail="No configuration found! Please provide 'config' in body, or valid 'course'/'year'/'semester' parameters, or parse a file first."
             )
 
-        # Generate timetable synchronously
+        # -----------------------------------------------------------------
+        # 2. APPLY EVENTS
+        # -----------------------------------------------------------------
+        # Deepcopy to avoid modifying the source config permanently
+        modified_config = deepcopy(base_config)
+
+        # Apply Events (Absences, Force Assigns, etc.)
+        modified_config = apply_events_to_config(modified_config, request.events)
+
+        # -----------------------------------------------------------------
+        # 3. GENERATE TIMETABLE
+        # -----------------------------------------------------------------
         data_obj = TimetableData(config_dict=modified_config)
+        
         genetic_algo = GeneticAlgorithm(data_obj)
         genetic_algo.initialize_population()
         genetic_algo.evolve()
@@ -738,6 +848,7 @@ async def regenerate_with_events(
             "status": "completed",
             "timestamp": datetime.now().isoformat(),
             "events_applied": len(request.events),
+            "config_source": "database" if (not request.config and request.course) else "request/cache",
             "solutions": exported_solutions
         }
 

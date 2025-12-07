@@ -11,4 +11,5 @@ openpyxl
 numpy
 requests
 reportlab
-python-multipart
+pymongo
+readline
