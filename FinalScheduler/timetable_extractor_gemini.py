@@ -234,7 +234,8 @@ You are an expert university data extractor. Your task is to analyze the provide
 1. Look for time slots (periods) - extract start/end times EXACTLY as shown in the document
 2. DO NOT modify, add, or remove time periods
 3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
-4. Find all subjects and lab mentioned - create subject IDs and LAB IDs and their names
+4. Find all subjects mentioned - create subject IDs and names
+5. DO NOT SKIP Labs. They must be added in both subject and lab fields. LABS MUST BE IN BOTH "subject" and "labs"
 5. Identify faculty names - generate faculty IDs (F001, F002, etc.)
 6. Extract section names - create section IDs
 7. Find room information - create room IDs
@@ -255,7 +256,6 @@ You are an expert university data extractor. Your task is to analyze the provide
 ## IMPORTANT:
 
 - Extract REAL data from the document, don't just use template values
-- Add lab IDs in subjects too and in lab fields too
 - If you find specific time periods, use those instead of the template times
 - Map actual faculty names from the document
 - Use actual subject names and codes from the document
