@@ -241,8 +241,7 @@ You are an expert university data extractor. Your task is to analyze the provide
 8. Map subjects to faculty based on timetable assignments
 9. Infer department information from section names
 10. Create appropriate constraints based on what's in the document
-11. Add lab IDs in subjects too.
-12. Don't use ... to skip parts, use proper delimiters
+11. Don't use ... to skip parts, use proper delimiters
 
 ## CRITICAL INSTRUCTIONS FOR TIME SLOTS:
 - Extract ONLY the periods that are explicitly defined in the document
@@ -256,6 +255,7 @@ You are an expert university data extractor. Your task is to analyze the provide
 ## IMPORTANT:
 
 - Extract REAL data from the document, don't just use template values
+- Add lab IDs in subjects too and in lab fields too
 - If you find specific time periods, use those instead of the template times
 - Map actual faculty names from the document
 - Use actual subject names and codes from the document
