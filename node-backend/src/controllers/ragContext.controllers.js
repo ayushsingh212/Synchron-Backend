@@ -2,7 +2,15 @@ import ragContext from "../models/ragContext.model.js";
 import  ApiError  from "../utils/apiError.js";
 import  ApiResponse  from "../utils/apiResponse.js";
 import {  GetObjectCommand } from "@aws-sdk/client-s3";
+// import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+// import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
+
+// Set up the worker properly for Node.js
+pdfjsLib.GlobalWorkerOptions.workerSrc = require.resolve('pdfjs-dist/legacy/build/pdf.worker.mjs');
 import asyncHandler from "../utils/asyncHandler.js";
 import {  s3,generateSignedUrl } from "../utils/awsS3.js";
 import { s3Client } from "../utils/ragEngine.js";
