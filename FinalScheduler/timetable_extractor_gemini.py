@@ -235,6 +235,7 @@ You are an expert university data extractor. Your task is to analyze the provide
 2. DO NOT modify, add, or remove time periods
 3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
 4. Find all subjects mentioned - create subject IDs and names
+5. DO NOT SKIP Labs. They must be added in both subject and lab fields. LABS MUST BE IN BOTH "subject" and "labs"
 5. Identify faculty names - generate faculty IDs (F001, F002, etc.)
 6. Extract section names - create section IDs
 7. Find room information - create room IDs

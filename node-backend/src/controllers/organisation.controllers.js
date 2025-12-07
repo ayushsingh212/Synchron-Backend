@@ -1,4 +1,4 @@
-// src/controllers/organisation.controllers.js
+
 import asyncHandler from "../utils/asyncHandler.js";
 import { Organisation } from "../models/organisation.model.js";
 import ApiError from "../utils/apiError.js";

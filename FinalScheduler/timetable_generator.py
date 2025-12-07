@@ -1148,11 +1148,15 @@ class TimetableExporter:
             faculty_entries = [e for e in self.solution.timetable if e.faculty_id == faculty_id]
             
             weekly_schedule = {}
+            placed_map = {}
+            
             for day in range(self.data.num_working_days):
                 day_name = self.data.working_days[day]
                 weekly_schedule[day_name] = {}
+                placed_map[day_name] = {} #initialized empty map
                 
                 for period in self.data.period_ids:
+                    placed_map[day_name][period] = 0                    
                     if period in self.data.lunch_break_periods:
                         weekly_schedule[day_name][period] = "LUNCH BREAK"
                     elif period in self.data.break_periods:
@@ -1178,6 +1182,8 @@ class TimetableExporter:
                     }
                     weekly_schedule[day_name][period] = class_info
 
+                    placed_map[day_name][period] = 1
+
             faculty_data[faculty_id] = {
                 "faculty_id": faculty_id,
                 "faculty_name": faculty_info.get('name', faculty_id),
@@ -1186,6 +1192,7 @@ class TimetableExporter:
                 "max_hours_per_week": faculty_info.get('max_hours_per_week', 0),
                 "subjects_taught": faculty_info.get('subjects', []),
                 "timetable": weekly_schedule,
+                "placed": placed_map,
                 "periods": {p: self._time_str(p) for p in self.data.period_ids}
             }
 
