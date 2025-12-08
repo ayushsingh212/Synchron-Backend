@@ -866,52 +866,6 @@ class TimetableChromosome:
 
         self.calculate_fitness()
 
-
-    def calculate_fitness(self) -> float:
-        self.constraint_violations = self._check_hard_constraints()
-        soft_scores = self._check_soft_constraints()
-
-        # -----------------------------------------------------------
-        # Elective Slot Violations (STRICT ENFORCEMENT)
-        # -----------------------------------------------------------
-        elec_violation = 0
-
-        for e in self.timetable:
-            # Elective must be inside elective slot
-            if e.is_elective and not self._is_valid_elective_slot(e):
-                elec_violation += 1
-
-            # Regular class cannot occupy elective slot
-            if (not e.is_elective) and self._is_regular_in_elective_slot(e):
-                elec_violation += 1
-
-        if elec_violation > 0:
-            self.constraint_violations['elective_slot_violation'] = elec_violation
-        else:
-            self.constraint_violations.pop('elective_slot_violation', None)
-        # -----------------------------------------------------------
-        # End elective constraint block
-        # -----------------------------------------------------------
-
-        total_required = sum(len(classes) for classes in self.required_classes_map.values())
-        scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
-        coverage_ratio = scheduled / max(1, total_required)
-
-        reward = coverage_ratio * 1000.0
-        reward += soft_scores.get('balanced_daily_load', 0.0) * 20.0
-
-        penalty = 0.0
-        penalty += self.constraint_violations.get('faculty_clash', 0) * 1000.0
-        penalty += self.constraint_violations.get('room_clash', 0) * 1000.0
-        penalty += self.constraint_violations.get('section_clash', 0) * 1000.0
-
-        # Add elective penalties
-        penalty += elec_violation * 2000
-
-        self.fitness_score = max(1.0, reward - penalty)
-        return self.fitness_score
-
-
     def _section_classes_on_day(self, section_id: str, day: int) -> int:
         """Return number of scheduled periods for a section on a given day."""
         return len([e for e in self.timetable if e.section_id == section_id and e.time_slot.day == day])
@@ -921,15 +875,18 @@ class TimetableChromosome:
         return len([e for e in self.timetable if e.section_id == section_id and e.subject_id == subject_id and e.time_slot.day == day])
 
     def _check_hard_constraints(self) -> Dict[str, int]:
-        """Optimized constraint checking"""
+        """Optimized constraint checking with lab continuity"""
         violations = {}
         faculty_slots = {}
         room_slots = {}
         section_slots = {}
 
+        # ----------------------------------------------------
+        # 1. FACULTY / ROOM / SECTION CLASH CHECKS
+        # ----------------------------------------------------
         for entry in self.timetable:
             key = (entry.time_slot.day, entry.time_slot.period)
-            
+
             # Faculty clash
             if entry.faculty_id:
                 if entry.faculty_id not in faculty_slots:
@@ -953,6 +910,32 @@ class TimetableChromosome:
                 violations['section_clash'] = violations.get('section_clash', 0) + 1
             section_slots[entry.section_id].add(key)
 
+        for section_id, classes in self.required_classes_map.items():
+            lab_sessions = [c for c in classes if c.get('is_lab_session')]
+
+            for lab in lab_sessions:
+                lab_id = lab['lab_session_id']
+                req_len = lab['requires_consecutive_periods']
+
+                assigned = sorted(
+                    [e for e in self.timetable if e.lab_session_id == lab_id],
+                    key=lambda x: (x.time_slot.day, x.time_slot.period)
+                )
+
+                if len(assigned) != req_len:
+                    violations['lab_continuity'] = violations.get('lab_continuity', 0) + 1
+                else:
+                    is_consecutive = True
+                    for i in range(len(assigned)-1):
+                        p1 = assigned[i].time_slot
+                        p2 = assigned[i+1].time_slot
+                        if not (p1.day == p2.day and p2.period == p1.period + 1):
+                            is_consecutive = False
+                            break
+
+                    if not is_consecutive:
+                        violations['lab_continuity'] = violations.get('lab_continuity', 0) + 1
+
         return violations
 
     def _check_soft_constraints(self) -> Dict[str, float]:
@@ -973,23 +956,53 @@ class TimetableChromosome:
 
         return scores
 
+    
     def calculate_fitness(self) -> float:
-        """Fitness including elective coverage reward."""
-        self.constraint_violations = self._check_hard_constraints()
-        soft_scores = self._check_soft_constraints()
+        """
+        Final merged fitness function (NO balanced load constraint):
+        - Normal coverage reward
+        - Elective coverage reward
+        - Elective slot violations (strict)
+        - Lab continuity violations
+        - Clash penalties (faculty / room / section)
+        """
 
-        # -----------------------------
-        # Coverage (normal classes)
-        # -----------------------------
+        # ----------------------------------------------------
+        # HARD CONSTRAINT VIOLATIONS (includes lab continuity)
+        # ----------------------------------------------------
+        self.constraint_violations = self._check_hard_constraints()
+
+        # ----------------------------------------------------
+        # ELECTIVE SLOT VIOLATIONS
+        # ----------------------------------------------------
+        elective_slot_violation = 0
+        for e in self.timetable:
+
+            # Elective must be inside an elective slot
+            if e.is_elective and not self._is_valid_elective_slot(e):
+                elective_slot_violation += 1
+
+            # Regular class must NOT occupy an elective slot
+            if not e.is_elective and self._is_regular_in_elective_slot(e):
+                elective_slot_violation += 1
+
+        if elective_slot_violation > 0:
+            self.constraint_violations['elective_slot_violation'] = elective_slot_violation
+        else:
+            self.constraint_violations.pop('elective_slot_violation', None)
+
+        # ----------------------------------------------------
+        # COVERAGE REWARD
+        # ----------------------------------------------------
         total_required = sum(len(classes) for classes in self.required_classes_map.values())
         scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
         coverage_ratio = scheduled / max(1, total_required)
 
         reward = coverage_ratio * 800.0
 
-        # -----------------------------
-        # Elective coverage
-        # -----------------------------
+        # ----------------------------------------------------
+        # ELECTIVE COVERAGE REWARD
+        # ----------------------------------------------------
         elective_required = sum(
             1 for classes in self.required_classes_map.values()
             for c in classes if c.get("is_elective")
@@ -1001,105 +1014,168 @@ class TimetableChromosome:
         )
 
         elective_ratio = elective_scheduled / max(1, elective_required)
-        reward += elective_ratio * 600.0   # Strong reward for covering electives
+        reward += elective_ratio * 600.0   # Strong elective reward
 
-        # -----------------------------
-        # Soft constraints
-        # -----------------------------
-        reward += soft_scores.get('balanced_daily_load', 0) * 20.0
+        # ----------------------------------------------------
+        # (Soft constraints removed completely)
+        # ----------------------------------------------------
 
-        # -----------------------------
-        # Penalties
-        # -----------------------------
-        penalty = 0
-        penalty += self.constraint_violations.get('faculty_clash', 0) * 1000
-        penalty += self.constraint_violations.get('room_clash', 0) * 1000
-        penalty += self.constraint_violations.get('section_clash', 0) * 1000
-
-        self.fitness_score = max(1.0, reward - penalty)
-        return self.fitness_score
-
-
-    def calculate_fitness(self) -> float:
-        """Simplified fitness calculation"""
-        self.constraint_violations = self._check_hard_constraints()
-        soft_scores = self._check_soft_constraints()
-
-        total_required = sum(len(classes) for classes in self.required_classes_map.values())
-        scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
-        coverage_ratio = scheduled / max(1, total_required)
-
-        # Simple reward/penalty system
-        reward = coverage_ratio * 1000.0
-        reward += soft_scores.get('balanced_daily_load', 0.0) * 20.0
-
+        # ----------------------------------------------------
+        # PENALTIES
+        # ----------------------------------------------------
         penalty = 0.0
-        penalty += self.constraint_violations.get('faculty_clash', 0) * 1000.0
-        penalty += self.constraint_violations.get('room_clash', 0) * 1000.0
-        penalty += self.constraint_violations.get('section_clash', 0) * 1000.0
 
+        # Faculty / Room / Section clashes
+        penalty += self.constraint_violations.get("faculty_clash", 0) * 1000.0
+        penalty += self.constraint_violations.get("room_clash", 0) * 1000.0
+        penalty += self.constraint_violations.get("section_clash", 0) * 1000.0
+
+        # Elective slot violation penalty
+        penalty += elective_slot_violation * 2000.0
+
+        # Lab continuity penalty
+        penalty += self.constraint_violations.get("lab_continuity", 0) * 1500.0
+
+        # ----------------------------------------------------
+        # FINAL FITNESS
+        # ----------------------------------------------------
         self.fitness_score = max(1.0, reward - penalty)
         return self.fitness_score
 
     def mutate(self):
-        """Optimized mutation"""
         mutation_rate = self.data.ga_params.get('mutation_rate', 0.2)
-        if random.random() >= mutation_rate or not self.timetable:
+        if random.random() >= mutation_rate:
             return
 
-        eligible_entries = [e for e in self.timetable if not e.is_lab_second_period and not e.is_elective]
+        # -------------------------------------------------------
+        # 1. FIX BROKEN LABS BEFORE ANY OTHER MUTATION
+        # -------------------------------------------------------
+        for section_id, classes in self.required_classes_map.items():
+            lab_sessions = [c for c in classes if c.get('is_lab_session')]
+            
+            for lab in lab_sessions:
+                lab_id = lab['lab_session_id']
+                req_len = lab['requires_consecutive_periods']
+
+                # Get all assigned instances
+                assigned = sorted(
+                    [e for e in self.timetable if e.lab_session_id == lab_id],
+                    key=lambda x: (x.time_slot.day, x.time_slot.period)
+                )
+
+                # Check if already valid
+                if len(assigned) == req_len:
+                    good = True
+                    for i in range(len(assigned)-1):
+                        p1 = assigned[i].time_slot
+                        p2 = assigned[i+1].time_slot
+                        if not (p1.day == p2.day and p2.period == p1.period + 1):
+                            good = False
+                            break
+                    if good:
+                        continue
+
+                # LAB IS BROKEN → FIX IT
+
+                # Remove old placements
+                for e in assigned:
+                    self._remove_from_occupied(e)
+                    self.timetable.remove(e)
+
+                # Attempt to place lab properly
+                faculty_id = self._get_eligible_faculty(lab['subject_id'], section_id)[0]
+                room_id = self._get_appropriate_room(section_id, lab)
+
+                # Search for valid sequences
+                placed = False
+                for day in random.sample(range(self.data.num_working_days), self.data.num_working_days):
+                    periods = [p for p in self.data.period_ids if p not in self.data.break_periods]
+
+                    # Build consecutive sequences
+                    seqs = []
+                    run = [periods[0]]
+                    for p in periods[1:]:
+                        if p == run[-1] + 1:
+                            run.append(p)
+                        else:
+                            if len(run) >= req_len:
+                                for i in range(len(run) - req_len + 1):
+                                    seq = run[i:i+req_len]
+                                    seqs.append([TimeSlot(day, q) for q in seq])
+                            run = [p]
+
+                    if len(run) >= req_len:
+                        for i in range(len(run) - req_len + 1):
+                            seq = run[i:i+req_len]
+                            seqs.append([TimeSlot(day, q) for q in seq])
+
+                    random.shuffle(seqs)
+
+                    for seq in seqs:
+                        # Check all consecutive slots are conflict free
+                        if all(self._is_conflict_free(section_id, faculty_id, room_id, s) for s in seq):
+                            # Place lab properly
+                            for j, sl in enumerate(seq):
+                                new_entry = TimetableEntry(
+                                    section_id=section_id,
+                                    subject_id=lab['subject_id'],
+                                    faculty_id=faculty_id,
+                                    room_id=room_id,
+                                    time_slot=sl,
+                                    entry_type="Lab",
+                                    lab_session_id=lab_id,
+                                    is_lab_second_period=(j != 0)
+                                )
+                                self.timetable.append(new_entry)
+                                self._add_to_occupied(new_entry)
+
+                            placed = True
+                            break
+                    if placed:
+                        break
+
+        # -------------------------------------------------------
+        # 2. MUTATE NORMAL THEORY ENTRIES (existing behavior)
+        # -------------------------------------------------------
+        eligible_entries = [
+            e for e in self.timetable 
+            if not e.is_lab_second_period and not e.is_elective
+        ]
         if not eligible_entries:
             return
 
         entry = random.choice(eligible_entries)
         original_slot = entry.time_slot
 
-        available_slots = [TimeSlot(d, p) for d in range(self.data.num_working_days)
-                          for p in self.data.period_ids if p not in self.data.break_periods]
+        available_slots = [
+            TimeSlot(d, p)
+            for d in range(self.data.num_working_days)
+            for p in self.data.period_ids
+            if p not in self.data.break_periods
+        ]
 
         for attempt in range(5):
             new_slot = random.choice(available_slots)
 
-            # -----------------------------
-            # Regular classes cannot move into elective slots
-            # -----------------------------
+            # Avoid elective slots
             if any(es.day == new_slot.day and es.period == new_slot.period
-                for es in self.data.elective_slots):
-                continue  # skip this mutation attempt entirely
+                    for es in self.data.elective_slots):
+                continue
 
-            if new_slot != original_slot:
-                self._remove_from_occupied(entry)
+            self._remove_from_occupied(entry)
 
-                # enforce per-subject per-day limit
-                subj_obj = self.data.subjects.get(entry.subject_id) or self.data.labs.get(entry.subject_id)
-                if subj_obj and subj_obj.get('max_classes_per_day') is not None:
-                    max_subj_per_day = int(subj_obj.get('max_classes_per_day'))
-                else:
-                    max_subj_per_day = int(self.data.hard_constraints.get(
-                        'max_classes_per_subject_per_day',
-                        self.data.hard_constraints.get('max_classes_per_subject', 2)
-                    ))
+            if self._is_conflict_free(entry.section_id, entry.faculty_id, entry.room_id, new_slot):
+                entry.time_slot = new_slot
+                self._add_to_occupied(entry)
+                break
+            else:
+                self._add_to_occupied(entry)
 
-                current_subj_count = len([
-                    e for e in self.timetable
-                    if e is not entry
-                    and e.section_id == entry.section_id
-                    and e.subject_id == entry.subject_id
-                    and e.time_slot.day == new_slot.day
-                ])
-
-                if current_subj_count + 1 > max_subj_per_day:
-                    self._add_to_occupied(entry)
-                    continue
-
-                if self._is_conflict_free(entry.section_id, entry.faculty_id, entry.room_id, new_slot):
-                    entry.time_slot = new_slot
-                    self._add_to_occupied(entry)
-                    break
-                else:
-                    self._add_to_occupied(entry)
-        
+        # -------------------------------------------------------
+        # 3. Recalculate fitness
+        # -------------------------------------------------------
         self.calculate_fitness()
+
 
     def crossover(self, other: 'TimetableChromosome') -> 'TimetableChromosome':
         """Simplified crossover"""

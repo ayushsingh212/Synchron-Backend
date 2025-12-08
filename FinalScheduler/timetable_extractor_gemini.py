@@ -180,7 +180,8 @@ class TimetableExtractor:
         "semester": 3,
         "departments": ["CSE"],
         "specialization": "",
-        "lab_rooms": ["LAB-1", "LAB-2"]
+        "lab_rooms": ["LAB-1", "LAB-2"],
+        "requires_consecutive_periods": 2
         }}
     ],
 
@@ -250,6 +251,7 @@ class TimetableExtractor:
     6. DO NOT skip labs — include in both `"subjects"` and `"labs"`.
     7. Extract and map faculty to subjects.
     8. Output ONLY valid JSON.
+    9. "requires_consecutive_periods" in labs is by default 2 if not mentioned, it is the number of consecutive lab periods for a particular lab.
 
     ## CRITICAL ELECTIVE RULES:
 
