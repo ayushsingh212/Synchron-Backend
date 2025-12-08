@@ -379,7 +379,6 @@ export const getInfoPdf = async (req, res) => {
 export const startTimeTableCreation = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
-  const {senateId} = req.senate
   if (!organisationId) {
     throw new ApiError(400, "Login First");
   }
