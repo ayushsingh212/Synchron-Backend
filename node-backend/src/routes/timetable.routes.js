@@ -8,7 +8,6 @@ import { saveTimetable } from "../controllers/organisationData.controllers.js";
 
 const router = Router();
 
-// Uncomment to protect routes
 router.use(verifyJWT)         
 
 router.post("/generate",startTimeTableCreation);

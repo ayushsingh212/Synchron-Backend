@@ -2,11 +2,12 @@ import ragContext from "../models/ragContext.model.js";
 import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { GetObjectCommand } from "@aws-sdk/client-s3";
-import PDFParser from "pdf2json";
 import asyncHandler from "../utils/asyncHandler.js";
 import { s3, generateSignedUrl } from "../utils/awsS3.js";
 import { s3Client } from "../utils/ragEngine.js";
 
+import extract from "pdf-text-extract";
+import fs from "fs";
 
 async function downloadPdfFromS3(key) {
   const command = new GetObjectCommand({
@@ -15,51 +16,80 @@ async function downloadPdfFromS3(key) {
   });
 
   const response = await s3Client.send(command);
+
   const chunks = [];
   for await (const chunk of response.Body) {
     chunks.push(chunk);
   }
+
   return Buffer.concat(chunks);
 }
 
-async function extractPdfText(pdfBuffer) {
+async function extractPdfText(buffer) {
+  const tempFile = "temp.pdf";
+  fs.writeFileSync(tempFile, buffer);
+
   return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser();
-    
-    pdfParser.on("pdfParser_dataError", (errData) => {
-      console.error("PDF parsing error:", errData.parserError);
-      reject(new ApiError(500, "Failed to extract text from PDF"));
+    extract(tempFile, (err, pages) => {
+      fs.unlinkSync(tempFile);
+
+      if (err) return reject(err);
+      resolve(pages.join("\n"));
     });
-    
-    pdfParser.on("pdfParser_dataReady", (pdfData) => {
-      try {
-        // Extract text from all pages
-        let fullText = "";
-        if (pdfData.Pages) {
-          pdfData.Pages.forEach((page) => {
-            if (page.Texts) {
-              page.Texts.forEach((text) => {
-                if (text.R) {
-                  text.R.forEach((r) => {
-                    if (r.T) {
-                      fullText += decodeURIComponent(r.T) + " ";
-                    }
-                  });
-                }
-              });
-              fullText += "\n";
-            }
-          });
-        }
-        resolve(fullText.trim());
-      } catch (error) {
-        reject(new ApiError(500, "Failed to process PDF content"));
-      }
-    });
-    
-    pdfParser.parseBuffer(pdfBuffer);
   });
 }
+
+
+
+// async function extractPdfText(pdfBuffer) {
+//   return new Promise((resolve, reject) => {
+//     const pdfParser = new PDFParser();
+    
+//     pdfParser.on("pdfParser_dataError", (errData) => {
+//       console.error("PDF parsing error:", errData.parserError);
+//       reject(new ApiError(500, "Failed to extract text from PDF"));
+//     });
+    
+//     pdfParser.on("pdfParser_dataReady", (pdfData) => {
+//       try {
+//         // Extract text from all pages
+//         let fullText = "";
+//         if (pdfData.Pages) {
+//           pdfData.Pages.forEach((page) => {
+//             if (page.Texts) {
+//               page.Texts.forEach((text) => {
+//                 if (text.R) {
+//                   text.R.forEach((r) => {
+//                     if (r.T) {
+//                       fullText += decodeURIComponent(r.T) + " ";
+//                     }
+//                   });
+//                 }
+//               });
+//               fullText += "\n";
+//             }
+//           });
+//         }
+//         resolve(fullText.trim());
+//       } catch (error) {
+//         reject(new ApiError(500, "Failed to process PDF content"));
+//       }
+//     });
+    
+//     pdfParser.parseBuffer(pdfBuffer);
+//   });
+// }
+
+//  async function extractPdfText(buffer) {
+//   const pdf = openDocument(buffer);
+//   let text = "";
+
+//   for (let i = 0; i < pdf.pageCount; i++) {
+//     text += extractPageText(pdf, i) + "\n";
+//   }
+
+//   return text;
+// }
 
 
 export const getAllFolders = asyncHandler(async (req, res) => {

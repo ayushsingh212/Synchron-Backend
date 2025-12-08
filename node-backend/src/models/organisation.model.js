@@ -3,6 +3,7 @@ import mongoosePaginate from "mongoose-paginate-v2";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { minLength } from "zod";
 
 const organisationSchema = new Schema(
   {
@@ -38,8 +39,37 @@ const organisationSchema = new Schema(
       required: true,
       select: false,
     },
+    senates:[
+      {
+        organisationId:{
+          type:mongoose.Schema.Types.ObjectId,
+          ref:"Organisation"
+        },
+        senateId:{
+          type:String,
+          minLength:4
+        },
+        seneteEmail:{
+           type:String,
+           trim:true,
+           unique:true
+        }, 
+        role:{
+          type:String,
+          default:"senete"
+        },
+        password:{
+          type:String,
+          required:[true,"A password must be assigned for login"]
+        }
+      }
+    ],  
     avatar: {
       type: String,
+    },
+    role:{
+      type:String,
+      default:"authority"
     }
   },
   { timestamps: true }
@@ -71,18 +101,44 @@ organisationSchema.methods.generateAccessToken = function () {
   );
 };
 
-// JWT: Refresh Token
 organisationSchema.methods.generateRefreshToken = function () {
   return jwt.sign({ _id: this._id }, process.env.REFRESH_TOKEN_SECRET, {
     expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
   });
 };
+organisationSchema.methods.generateAdminToken = function () {
+  return jwt.sign(
+    {
+      type: "ADMIN",
+      organisationId: this._id,
+      organisationEmail: this.organisationEmail
+    },
+    process.env.ADMIN_TOKEN_SECRET,
+    {
+      expiresIn: process.env.ADMIN_TOKEN_EXPIRY
+    }
+  );
+};
 
-// Plugins
+organisationSchema.methods.generateSenateToken = function (senateId) {
+  return jwt.sign(
+    {
+      type: "SENATE",
+      organisationId: this._id,
+      senateId
+    },
+    process.env.SENATE_TOKEN_SECRET,
+    {
+      expiresIn: process.env.SENATE_TOKEN_EXPIRY
+    }
+  );
+};
+
+
+
 organisationSchema.plugin(mongoosePaginate);
 organisationSchema.plugin(mongooseAggregatePaginate);
 
-// ✅ Prevent OverwriteModelError
 export const Organisation =
   mongoose.models.Organisation ||
   mongoose.model("Organisation", organisationSchema);
