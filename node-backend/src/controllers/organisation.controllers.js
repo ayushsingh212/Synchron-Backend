@@ -68,7 +68,7 @@ const validateOrThrow = (schema, data) => {
 };
 
 
-const generateAccessAndRefreshToken = async (organisationId) => {
+export const generateAccessAndRefreshToken = async (organisationId) => {
   const organisation = await Organisation.findById(organisationId);
   if (!organisation) throw new ApiError(404, "Organisation not found");
 
@@ -169,8 +169,8 @@ const verifyOrganisationEmail = asyncHandler(async (req, res) => {
   await org.save();
 
   const {accessToken,refreshToken} = await generateAccessAndRefreshToken(org._id);
-
-  return res.status(200).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new ApiResponse(200, {}, "Email verified successfully"));
+    const adminToken = org.generateAdminToken();
+  return res.status(200).cookie("adminToken",adminToken,options).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new ApiResponse(200, {}, "Email verified successfully"));
 });
 
 
@@ -212,10 +212,12 @@ const loginOrganisation = asyncHandler(async (req, res) => {
   const { refreshToken, accessToken } = await generateAccessAndRefreshToken(organisation._id);
   const safeOrganisation = await Organisation.findById(organisation._id).select("-password -refreshToken");
 
+  const adminToken = organisation.generateAdminToken()
   return res
     .status(200)
     .cookie("refreshToken", refreshToken, options)
     .cookie("accessToken", accessToken, options)
+    .cookie("adminToken",adminToken,options)
     .json(new ApiResponse(200, safeOrganisation, "Login successful"));
 });
 

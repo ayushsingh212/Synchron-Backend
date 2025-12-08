@@ -16,10 +16,16 @@ import {
   createFolder,
   deleteFolder
 } from "../controllers/ragContext.controllers.js";
+import { verifySenateToken } from "../middlewares/senate.middleware.js";
 
 const router = express.Router();
 
-router.post("/upload-urls", verifyJWT, async (req, res) => {
+
+router.use(verifyJWT)
+router.use(verifySenateToken)
+
+
+router.post("/upload-urls", async (req, res) => {
   const { files } = req.body;
 
   const urls = await generateMultiplePresignedUploadUrls(files); // folder auto = synchron
@@ -27,19 +33,19 @@ router.post("/upload-urls", verifyJWT, async (req, res) => {
   res.json({ success: true, data: urls });
 });
 
-router.get("/folders", verifyJWT, getAllFolders);
-router.post("/createFolder", verifyJWT, createFolder);
-router.delete("/deleteFolder", verifyJWT, deleteFolder);
-router.post("/save-docs", verifyJWT, saveUploadedDocuments);
+router.get("/folders",  getAllFolders);
+router.post("/createFolder",  createFolder);
+router.delete("/deleteFolder",  deleteFolder);
+router.post("/save-docs",  saveUploadedDocuments);
 
-router.post("/extract-one", verifyJWT, extractTextForDocument);
+router.post("/extract-one",  extractTextForDocument);
 
-router.post("/extract-all", verifyJWT, extractAllDocumentsText);
+router.post("/extract-all",  extractAllDocumentsText);
 
-router.get("/docs", verifyJWT, getAllDocuments);
+router.get("/docs",  getAllDocuments);
 
-router.post("/delete-doc", verifyJWT, deleteDocument);
+router.post("/delete-doc",  deleteDocument);
 
-router.post("/delete-context", verifyJWT, deleteEntireContext);
+router.post("/delete-context",  deleteEntireContext);
 
 export default router;
