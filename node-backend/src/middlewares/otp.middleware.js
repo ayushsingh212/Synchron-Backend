@@ -8,6 +8,6 @@ const redisClient = createClient({
 
 redisClient.on("error", (err) => console.error("Redis Client Error:", err));
 
-// await redisClient.connect();
+await redisClient.connect();
 
 export { redisClient };

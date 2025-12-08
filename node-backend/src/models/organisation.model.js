@@ -48,6 +48,11 @@ const organisationSchema = new Schema(
         senateId:{
           type:String,
           minLength:4
+        },
+        seneteEmail:{
+           type:String,
+           trim:true,
+           unique:true
         }, 
         password:{
           type:String,
