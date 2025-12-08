@@ -54,6 +54,10 @@ const organisationSchema = new Schema(
            trim:true,
            unique:true
         }, 
+        role:{
+          type:String,
+          default:"senete"
+        },
         password:{
           type:String,
           required:[true,"A password must be assigned for login"]
@@ -62,6 +66,10 @@ const organisationSchema = new Schema(
     ],  
     avatar: {
       type: String,
+    },
+    role:{
+      type:String,
+      default:"authority"
     }
   },
   { timestamps: true }
