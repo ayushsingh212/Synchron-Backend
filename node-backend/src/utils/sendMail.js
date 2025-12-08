@@ -165,6 +165,7 @@ const sendEmail = (email, subject, data, purpose) => {
         border-top: 1px solid #eaeaea;
       }
       
+      
       .footer-links {
         margin-top: 16px;
       }
