@@ -5,7 +5,7 @@ import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const createSenate = asyncHandler(async (req, res) => {
-  const { organisationId } = req.user;
+  const  organisationId  = req.organisation._id;
   const { senateId, password } = req.body;
 
   if (!senateId || !password) throw new ApiError(400, "Senate fields missing");
@@ -32,7 +32,7 @@ export const createSenate = asyncHandler(async (req, res) => {
 });
 
 export const removeSenate = asyncHandler(async (req, res) => {
-  const { organisationId } = req.user;
+  const  organisationId  = req.organisation._id;
   const { senateId } = req.params;
 
   const org = await Organisation.findById(organisationId);
@@ -52,7 +52,7 @@ export const removeSenate = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, org.senates, "Senate removed"));
 });
 export const listSenates = asyncHandler(async (req, res) => {
-  const { organisationId } = req.user; 
+  const  organisationId  = req.organisation._id; 
   const org = await Organisation.findById(organisationId);
   if (!org) throw new ApiError(404, "Organisation not found");
   return res
