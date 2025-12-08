@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { approveGeneratedSolution, checkGenerationStatus, generateByGivingData, getDetailedTimeTable, getFacultyTimeTables       , getFacultyTimetablesByGroup, getFacultyTimeTablesForSpecific, getGeneratedSolutionById, getGeneratedSolutions, getInfoPdf, getSectionTimetablesByGroup, getSectionTimeTablesDb, getSectionTimeTablesForSpecific, getSingleFacultyTimeTable, getSingleSectionTimeTable, startTimeTableCreation, updateFacultyTimetable } from "../controllers/timetable.controllers.js";
+import { approveGeneratedSolution, checkGenerationStatus, generateByGivingData, getDetailedTimeTable, getFacultyTimeTables       , getFacultyTimetablesByGroup, getFacultyTimeTablesForSpecific, getGeneratedSolutionById, getGeneratedSolutions, getGeneratedSolutionsAll, getInfoPdf, getSectionTimetablesByGroup, getSectionTimeTablesDb, getSectionTimeTablesForSpecific, getSingleFacultyTimeTable, getSingleSectionTimeTable, startTimeTableCreation, updateFacultyTimetable } from "../controllers/timetable.controllers.js";
 import {   generateAndDownloadAllFacultyTimetables } from "../controllers/facultyTimetable.controllers.js";
 import {   updateSectionTimetable } from "../controllers/sectionTimetable.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { saveTimetable } from "../controllers/organisationData.controllers.js";
+import { verifyAdminToken } from "../middlewares/admin.middleware.js";
 
 const router = Router();
 
@@ -55,6 +56,14 @@ router.get("/sectionTimeTable/getSpecific",getSectionTimeTablesForSpecific);
 router.get("/solutions",getGeneratedSolutions);
 router.get("/solutions/:id",getGeneratedSolutionById);
 router.post("/solutions/approve",approveGeneratedSolution)
+
+
+
+// 
+
+
+router.use(verifyAdminToken)
+router.get("/getAllGeneratedSolutions",getGeneratedSolutionsAll)
 
 
 export default router;
