@@ -347,6 +347,7 @@ class TimetableData:
         self.soft_constraints = constraints.get('soft_constraints') or {}
         self.special_requirements = self.config.get('special_requirements') or {}
         self.ga_params = self.config.get('genetic_algorithm_params') or {}
+        self.faculty_experience = self.config.get('faculty_experience', {})
 
     def _resolve_subject_reference(self, subject_ref: str) -> Optional[str]:
         if not subject_ref:
@@ -519,7 +520,7 @@ class TimetableChromosome:
         return f"Room-{section_id}"
 
     def _get_eligible_faculty(self, subject_id: str, section_id: str = None) -> List[str]:
-        """Optimized faculty selection with fallbacks"""
+        """Optimized faculty selection with combined workload + experience scoring"""
         eligible = []
 
         # Quick check for existing assignment
@@ -536,23 +537,45 @@ class TimetableChromosome:
         if section_id:
             coord_id = self.data.section_coordinator.get(section_id)
             if coord_id:
-                # If strict enforcement requested, return only coordinator
                 force = self.data.special_requirements.get('force_coordinator_assignments', True)
                 if coord_id in eligible:
                     if force:
                         return [coord_id]
-                    # move coordinator to front
+                    # Move coordinator to front
                     eligible = [coord_id] + [f for f in eligible if f != coord_id]
 
-        # Load balancing
+        # ---- NEW EXPERIENCE + WORKLOAD PRIORITY LOGIC ----
         if len(eligible) > 1:
-            eligible.sort(key=lambda fid: self.faculty_workload.get(fid, 0))
 
-        # No faculty found: return explicit marker
+            # List A: sort by workload (ascending)
+            workload_sorted = sorted(
+                eligible,
+                key=lambda fid: self.faculty_workload.get(fid, 0)
+            )
+
+            # List B: sort by experience (descending)
+            exp_sorted = sorted(
+                eligible,
+                key=lambda fid: self.data.faculty_experience.get(fid, 0),
+                reverse=True
+            )
+
+            # Create index lookup dictionaries
+            workload_index = {fid: i for i, fid in enumerate(workload_sorted)}
+            exp_index = {fid: i for i, fid in enumerate(exp_sorted)}
+
+            # Compute combined priority score
+            eligible = sorted(
+                eligible,
+                key=lambda fid: workload_index[fid] + exp_index[fid]
+            )
+
+        # No faculty found
         if not eligible:
             eligible = ["NO FACULTY FOUND"]
 
         return eligible
+
 
     def _get_consecutive_slots(self, day: int) -> List[Tuple[TimeSlot, TimeSlot]]:
         """Find consecutive slot sequences for a given day.
@@ -1194,6 +1217,7 @@ class TimetableExporter:
                 "timetable": weekly_schedule,
                 "placed": placed_map,
                 "periods": {p: self._time_str(p) for p in self.data.period_ids}
+                "faculty_experience": faculty_info.get('experience', 0) 
             }
 
         return faculty_data
@@ -1302,6 +1326,14 @@ def main():
         print(f"Lab sessions: {stats['lab_sessions']}")
         print(f"Constraint violations: {best_solution.constraint_violations}")
 
+                # --- NEW: log this GA run ---
+        try:
+            from log_ga_run import log_run
+            log_run(data, ga, best_solution)
+        except Exception as e:
+            print(f"Warning: could not log GA run: {e}")
+
+
         return best_solution
 
     except Exception as e:
@@ -1310,3 +1342,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    from log_ga_run import log_run
+    log_run(data, ga, best_solution)

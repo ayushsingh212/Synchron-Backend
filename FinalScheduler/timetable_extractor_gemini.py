@@ -186,7 +186,8 @@ You are an expert university data extractor. Your task is to analyze the provide
       "subjects": ["CS301", "CS301L"],
       "max_hours_per_week": 20,
       "avg_leaves_per_month": 2,
-      "preferred_time_slots": [1, 2, 3, 4, 5, 7, 8]
+      "preferred_time_slots": [1, 2, 3, 4, 5, 7, 8],
+      "faculty_experience" : 0
     }}
   ],
   "rooms": [
