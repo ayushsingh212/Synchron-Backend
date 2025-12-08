@@ -379,7 +379,6 @@ export const getInfoPdf = async (req, res) => {
 export const startTimeTableCreation = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
-
   if (!organisationId) {
     throw new ApiError(400, "Login First");
   }
@@ -1221,6 +1220,7 @@ export const getSectionTimeTablesForSpecific = asyncHandler(
   }
 );
 export const getGeneratedSolutions = asyncHandler(async (req, res) => {
+  const {senateId}  = req.senate;
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
 
@@ -1260,7 +1260,8 @@ export const getGeneratedSolutions = asyncHandler(async (req, res) => {
   return res.status(200).json(
     new ApiResponse(
       200,
-      {
+      { 
+        generateBy:senateId,
         course: c,
         year: y,
         semester: s,
@@ -1270,6 +1271,67 @@ export const getGeneratedSolutions = asyncHandler(async (req, res) => {
     )
   );
 });
+export const getGeneratedSolutionsAll = asyncHandler(async (req, res) => {
+  const organisationId = req.organisation?._id;
+  const { course, year, semester } = req.query;
+
+  if (!organisationId) throw new ApiError(401, "Login first");
+
+  if (!year?.trim() || !semester?.trim()) {
+    throw new ApiError(400, "Year and semester are required");
+  }
+
+  const y = year.trim().toLowerCase();
+  const s = semester.trim().toLowerCase();
+
+  const filter = {
+    organisationId,
+    year: y,
+    semester: s,
+  };
+
+  if (course?.trim()) {
+    filter.course = course.trim().toLowerCase();
+  }
+
+  const solutions = await GeneratedSolution.find(filter)
+    .sort({ course: 1, rank: 1, createdAt: -1 })
+    .lean();
+
+  if (!solutions.length)
+    throw new ApiError(404, "No timetable variants found");
+
+  const grouped = {};
+
+  solutions.forEach((sol) => {
+    const c = sol.course;
+
+    if (!grouped[c]) grouped[c] = [];
+
+    grouped[c].push({
+      _id: sol._id,
+      rank: sol.rank,
+      fitness: sol.fitness,
+      statistics: sol.statistics,
+      isApproved: sol.isApproved,
+      createdAt: sol.createdAt,
+    });
+  });
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        year: y,
+        semester: s,
+        totalCourses: Object.keys(grouped).length,
+        solutionsByCourse: grouped,
+      },
+      "Generated timetable variants fetched"
+    )
+  );
+});
+
 export const getGeneratedSolutionById = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { id } = req.params;

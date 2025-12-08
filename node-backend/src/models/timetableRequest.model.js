@@ -2,7 +2,7 @@ import mongoose, { Schema } from "mongoose";
 
 const timetableRequestSchema = new Schema(
   {
-    facultyId: {
+    seneteId: {
       type: Schema.Types.ObjectId,
       ref: "Faculty",
       required: true,
@@ -14,15 +14,9 @@ const timetableRequestSchema = new Schema(
     },
     message: {
       type: String,
-      required: true,
-      trim: true,
+
+      default:"Timetable for approval" 
     },
-    preferredSlots: [
-      {
-        day: String,
-        timeSlot: String,
-      },
-    ],
     status: {
       type: String,
       enum: ["pending", "approved", "rejected"],
@@ -35,5 +29,5 @@ const timetableRequestSchema = new Schema(
   },
   { timestamps: true }
 );
-
+ 
 export const TimetableRequest = mongoose.model("TimetableRequest", timetableRequestSchema);

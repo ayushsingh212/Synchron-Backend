@@ -8,6 +8,7 @@ RUN npm install
 COPY . .
 
 RUN mkdir -p public/temp public/uploads
+RUN apt-get update && apt-get install -y poppler-utils
 
 EXPOSE 8080
 

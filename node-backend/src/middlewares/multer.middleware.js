@@ -24,3 +24,13 @@ const fileFilter = (req, file, cb) => {
 };
 
 export const upload = multer({ storage, fileFilter });
+// import multer from "multer";
+
+// const storage = multer.memoryStorage(); // store file in memory, NOT disk
+
+// export const upload = multer({
+//   storage,
+//   limits: {
+//     fileSize: 10 * 1024 * 1024, // 10 MB per file
+//   }
+// });

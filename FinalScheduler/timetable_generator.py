@@ -1,3 +1,5 @@
+from collections import defaultdict
+import copy
 import json
 import random
 import numpy as np
@@ -6,8 +8,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Tuple, Optional, Set, Callable
 from copy import deepcopy
 from datetime import datetime
-import os
-import traceback
 import logging
 import threading
 import time
@@ -41,6 +41,8 @@ class TimetableEntry:
     batch: str = ""
     lab_session_id: str = ""
     is_lab_second_period: bool = False
+    is_elective: bool = False  # Flag for electives
+    elective_group_id: Optional[str] = None  # New: Track elective group for multiples
 
 class GenerationProgress:
     """Optimized progress tracker with initialization progress"""
@@ -134,6 +136,10 @@ class TimetableData:
         ts_check = self.config.get('time_slots') or {}
         if not ts_check.get('periods'):
             self.config['time_slots'] = self._get_default_time_slots()
+
+        # New: Validate elective slots
+        if 'elective_slots' not in self.config:
+            self.config['elective_slots'] = {}  # Default empty
 
     def _get_default_section(self, section_name: str) -> Dict:
         defaults = {
@@ -249,6 +255,17 @@ class TimetableData:
         self.break_periods.update(self.lunch_break_periods)
         self.break_periods.update(self.mentorship_periods)
 
+        self.elective_slots = []
+        elective_config = self.config.get("elective_slots", [])
+
+        for slot_info in elective_config:
+            try:
+                day = self.working_days.index(slot_info["day_name"])
+                period = slot_info["period"]
+                self.elective_slots.append(TimeSlot(day, period))
+            except:
+                continue
+
         # Process data structures
         departments_list = self.config.get('departments') or []
         self.departments = {d['dept_id']: d for d in departments_list}
@@ -259,6 +276,7 @@ class TimetableData:
                 s.setdefault('room', None)
                 s.setdefault('specialization', '')
                 s.setdefault('semester', 1)
+                s.setdefault('electives', [])  # New: List of elective subject_ids for this section
                 self.sections[s['section_id']] = s
 
         for s in (self.config.get('sections') or []):
@@ -266,6 +284,7 @@ class TimetableData:
             s.setdefault('room', None)
             s.setdefault('specialization', '')
             s.setdefault('semester', 1)
+            s.setdefault('electives', [])  # New
             self.sections[s['section_id']] = s
         self.subjects = {s['subject_id']: s for s in (self.config.get('subjects') or [])}
         self.labs = {l['lab_id']: l for l in (self.config.get('labs') or [])}
@@ -278,6 +297,7 @@ class TimetableData:
             subject.setdefault('specialization', '')
             subject.setdefault('semester', None)
             subject.setdefault('departments', [])
+            subject.setdefault('is_elective', False)
 
         for lab in self.labs.values():
             lab.setdefault('sessions_per_week', 2)
@@ -286,6 +306,7 @@ class TimetableData:
             lab.setdefault('departments', [])
             # By default labs require two consecutive periods
             lab.setdefault('requires_consecutive_periods', 2)
+            lab.setdefault('is_elective', False)
 
         # Build optimized mappings
         self.subject_name_mapping = self.config.get('subject_name_mapping') or {}
@@ -347,7 +368,7 @@ class TimetableData:
         self.soft_constraints = constraints.get('soft_constraints') or {}
         self.special_requirements = self.config.get('special_requirements') or {}
         self.ga_params = self.config.get('genetic_algorithm_params') or {}
-        self.faculty_experience = self.config.get('faculty_experience', {})
+        self.faculty_experience=self.config.get('faculty_experience',{})
 
     def _resolve_subject_reference(self, subject_ref: str) -> Optional[str]:
         if not subject_ref:
@@ -444,15 +465,16 @@ class TimetableChromosome:
         return True
 
     def _get_required_classes(self) -> Dict[str, List[Dict]]:
-        """Optimized class requirement calculation - reduce lab sessions if needed"""
+        """Enhanced: Support multiple electives per section via section['electives'] list."""
         req = {}
         for section_id, section in self.data.sections.items():
+            semester = section.get('semester', 1)
             req[section_id] = []
+            elective_group_id = f"{section_id}_electives"  # Unique group per section
             
-            # Add theory subjects
+            # Core theory subjects
             for subj in self.data.subjects.values():
-                if self._subject_applies_to_section(subj, section):
-                    # Respect min_classes_per_week if provided, otherwise use lectures_per_week
+                if self._subject_applies_to_section(subj, section) and not subj.get('is_elective', False):
                     classes_per_week = subj.get('min_classes_per_week', subj.get('lectures_per_week', 1))
                     try:
                         classes_per_week = max(1, int(classes_per_week))
@@ -461,11 +483,9 @@ class TimetableChromosome:
                     for _ in range(classes_per_week):
                         req[section_id].append({'subject_id': subj['subject_id'], 'type': 'Theory'})
 
-            # Add lab sessions but limit to avoid overcrowding
-            # Add all lab sessions as required entries (respect sessions_per_week or min_classes_per_week)
+            # Core labs
             for lab in self.data.labs.values():
-                if self._subject_applies_to_section(lab, section):
-                    # Use min_classes_per_week if provided for labs, otherwise sessions_per_week
+                if self._subject_applies_to_section(lab, section) and not lab.get('is_elective', False):
                     sessions = lab.get('min_classes_per_week', lab.get('sessions_per_week', 2))
                     try:
                         sessions = int(sessions)
@@ -482,7 +502,51 @@ class TimetableChromosome:
                             'requires_consecutive_periods': req_len
                         })
 
+            # Electives: From section['electives'] list or auto-pool
+            elective_subjects = [s for s in self.data.subjects.values()
+                     if s.get('is_elective', False)]
+            section_electives = section.get('electives', [])  # e.g., ["AI_ETHICS", "BLOCKCHAIN"]
+            num_electives = len(section_electives) or 1  # Default 1 if empty
+            elective_pool = {sid: subj for sid, subj in self.data.subjects.items() if subj.get('is_elective', False) and subj.get('semester') == semester}
+            
+            for i in range(num_electives):
+                if section_electives:
+                    elective_id = section_electives[i % len(section_electives)]  # Cycle if more than available
+                else:
+                    elective_id = random.choice(list(elective_pool.keys())) if elective_pool else None
+                
+                if elective_id and elective_id in elective_pool:
+                    req[section_id].append({
+                        'subject_id': elective_id,
+                        'type': 'Theory',
+                        'is_elective': True,
+                        'fixed_slot': True,
+                        'elective_group_id': elective_group_id
+                    })
+
         return req
+    
+    def _is_valid_elective_slot(self, entry: TimetableEntry) -> bool:
+        """Electives must be placed ONLY in allowed elective slots."""
+        if not entry.is_elective:
+            return True  # Not elective → always OK
+
+        slot = entry.time_slot
+        return any(
+            s.day == slot.day and s.period == slot.period
+            for s in self.data.elective_slots
+        )
+    
+    def _is_regular_in_elective_slot(self, entry: TimetableEntry) -> bool:
+        """Regular subjects must not be placed in elective slots."""
+        if entry.is_elective:
+            return False
+        slot = entry.time_slot
+        return any(
+            s.day == slot.day and s.period == slot.period
+            for s in self.data.elective_slots
+        )
+
 
     def _get_appropriate_room(self, section_id: str, class_info: Dict) -> Optional[str]:
         """Optimized room assignment with fallbacks"""
@@ -611,24 +675,93 @@ class TimetableChromosome:
         return consecutive_pairs
 
     def initialize_random(self, max_attempts_per_class: int = 20):
-        """Fast initialization with reduced attempts and better fallbacks"""
+        """Initialization with elective grouping, labs, theory, and fallback logic."""
         self.timetable = []
         self._occupied_slots = set()
         self.constraint_violations = {}
         self.section_subject_faculty_map = {}
         self.faculty_workload = {}
 
-        slots = [TimeSlot(d, p) for d in range(self.data.num_working_days)
-                for p in self.data.period_ids if p not in self.data.break_periods]
-        
+        slots = [
+            TimeSlot(d, p)
+            for d in range(self.data.num_working_days)
+            for p in self.data.period_ids
+            if p not in self.data.break_periods
+        ]
+
         if not slots:
             return
 
-        # Statistics for tracking (no logging)
-        placement_stats = {'placed': 0, 'failed': 0, 'lab_placed': 0, 'lab_failed': 0}
+        placement_stats = {
+            'placed': 0, 'failed': 0,
+            'lab_placed': 0, 'lab_failed': 0,
+            'elective_placed': 0, 'elective_failed': 0
+        }
+
+        # -----------------------------
+        # 1. BUILD ELECTIVE GROUPS FIRST
+        # -----------------------------
+        elective_groups = defaultdict(list)
 
         for section_id, classes in self.required_classes_map.items():
+            for c in classes:
+                if c.get("is_elective"):
+                    elective_groups[c["elective_group_id"]].append(
+                        (section_id, c)
+                    )
+
+        # -----------------------------
+        # 2. PLACE EACH ELECTIVE GROUP IN ONE FIXED SLOT
+        # -----------------------------
+        for group_id, group_items in elective_groups.items():
+
+            placed_group = False
+
+            for slot in self.data.elective_slots:   # VERY IMPORTANT
+                group_ok = True
+                tentative_entries = []
+
+                for (section_id, c) in group_items:
+                    eligible_faculty = self._get_eligible_faculty(c["subject_id"], section_id)
+                    faculty_id = eligible_faculty[0]
+                    room_id = self._get_appropriate_room(section_id, c)
+
+                    if not self._is_conflict_free(section_id, faculty_id, room_id, slot):
+                        group_ok = False
+                        break
+
+                    tentative_entries.append(
+                        TimetableEntry(
+                            section_id=section_id,
+                            subject_id=c["subject_id"],
+                            faculty_id=faculty_id,
+                            room_id=room_id,
+                            time_slot=slot,
+                            entry_type='Elective',
+                            is_elective=True
+                        )
+                    )
+
+                if group_ok:
+                    for e in tentative_entries:
+                        self.timetable.append(e)
+                        self._add_to_occupied(e)
+                    placed_group = True
+                    break
+
+            if not placed_group:
+                placement_stats["elective_failed"] += 1
+
+        # -----------------------------
+        # 3. NORMAL PLACEMENT: LAB + THEORY
+        # -----------------------------
+        for section_id, classes in self.required_classes_map.items():
             for class_info in classes:
+
+                # Skip electives (already placed)
+                if class_info.get("is_elective"):
+                    continue
+
                 eligible_faculty = self._get_eligible_faculty(class_info['subject_id'], section_id)
                 if not eligible_faculty:
                     placement_stats['failed'] += 1
@@ -639,158 +772,146 @@ class TimetableChromosome:
                     placement_stats['failed'] += 1
                     continue
 
+                # -----------------------------
+                # LAB PLACEMENT
+                # -----------------------------
                 if class_info.get('is_lab_session', False):
-                    # Deterministic lab placement: try days, sequences, faculties and rooms exhaustively
                     placed = False
                     req_len = int(class_info.get('requires_consecutive_periods', 2))
-                    # candidate rooms: prefer lab-specific rooms when available
-                    lab_obj = self.data.labs.get(class_info['subject_id'], {})
-                    candidate_rooms = lab_obj.get('lab_rooms') or list(self.data.rooms.keys())
 
                     days = list(range(self.data.num_working_days))
                     random.shuffle(days)
-                    # iterate days to distribute sessions across days
+
                     for day in days:
-                        # build consecutive sequences of length req_len for this day
-                        available_periods = [p for p in self.data.period_ids if p not in self.data.break_periods]
+                        period_list = [
+                            p for p in self.data.period_ids
+                            if p not in self.data.break_periods
+                        ]
+
                         sequences = []
-                        if available_periods and req_len <= len(available_periods):
-                            current_run = [available_periods[0]]
-                            for p in available_periods[1:]:
-                                if p == current_run[-1] + 1:
-                                    current_run.append(p)
-                                else:
-                                    if len(current_run) >= req_len:
-                                        for i in range(len(current_run) - req_len + 1):
-                                            seq = current_run[i:i+req_len]
-                                            sequences.append([TimeSlot(day, q) for q in seq])
-                                    current_run = [p]
-                            if len(current_run) >= req_len:
-                                for i in range(len(current_run) - req_len + 1):
-                                    seq = current_run[i:i+req_len]
-                                    sequences.append([TimeSlot(day, q) for q in seq])
+                        run = [period_list[0]]
+                        for p in period_list[1:]:
+                            if p == run[-1] + 1:
+                                run.append(p)
+                            else:
+                                if len(run) >= req_len:
+                                    for i in range(len(run) - req_len + 1):
+                                        seq = run[i:i+req_len]
+                                        sequences.append([TimeSlot(day, q) for q in seq])
+                                run = [p]
+
+                        if len(run) >= req_len:
+                            for i in range(len(run) - req_len + 1):
+                                seq = run[i:i+req_len]
+                                sequences.append([TimeSlot(day, q) for q in seq])
 
                         random.shuffle(sequences)
+
                         for seq in sequences:
-                            # enforce max classes per day constraint if present
-                            max_per_day = int(self.data.hard_constraints.get('max_classes_per_day_per_section',
-                                                                           self.data.hard_constraints.get('max_classes_per_day', 9999)))
-                            current_count = self._section_classes_on_day(section_id, day)
-                            if current_count + len(seq) > max_per_day:
-                                continue
+                            faculty_id = eligible_faculty[0]
 
-                            # enforce per-subject per-day limit (subject-level override, default 2)
-                            subj_obj = self.data.subjects.get(class_info['subject_id']) or self.data.labs.get(class_info['subject_id'])
-                            if subj_obj and subj_obj.get('max_classes_per_day') is not None:
-                                max_subj_per_day = int(subj_obj.get('max_classes_per_day'))
-                            else:
-                                max_subj_per_day = int(self.data.hard_constraints.get('max_classes_per_subject_per_day',
-                                                                                      self.data.hard_constraints.get('max_classes_per_subject', 2)))
-                            current_subj_count = self._subject_classes_on_day(section_id, class_info['subject_id'], day)
-                            if current_subj_count + len(seq) > max_subj_per_day:
-                                continue
+                            if all(self._is_conflict_free(section_id, faculty_id, room_id, s) for s in seq):
+                                entries = []
+                                for i, sl in enumerate(seq):
+                                    entries.append(
+                                        TimetableEntry(
+                                            section_id=section_id,
+                                            subject_id=class_info['subject_id'],
+                                            faculty_id=faculty_id,
+                                            room_id=room_id,
+                                            time_slot=sl,
+                                            entry_type="Lab",
+                                            lab_session_id=class_info["lab_session_id"],
+                                            is_lab_second_period=(i != 0)
+                                        )
+                                    )
+                                for e in entries:
+                                    self.timetable.append(e)
+                                    self._add_to_occupied(e)
 
-                            # try faculties and candidate rooms for this sequence
-                            room_choices = list(candidate_rooms)
-                            random.shuffle(room_choices)
-                            for faculty_id in eligible_faculty:
-                                for r in room_choices:
-                                    # check all slots conflict-free
-                                    if all(self._is_conflict_free(section_id, faculty_id, r, s) for s in seq):
-                                        lab_session_id = class_info['lab_session_id']
-                                        entries = []
-                                        for idx_slot, slot in enumerate(seq):
-                                            entry = TimetableEntry(
-                                                section_id=section_id,
-                                                subject_id=class_info['subject_id'],
-                                                faculty_id=faculty_id,
-                                                room_id=r,
-                                                time_slot=slot,
-                                                entry_type='Lab',
-                                                lab_session_id=lab_session_id,
-                                                is_lab_second_period=(idx_slot != 0)
-                                            )
-                                            entries.append(entry)
-
-                                        self.timetable.extend(entries)
-                                        for e in entries:
-                                            self._add_to_occupied(e)
-
-                                        section_subject_key = (section_id, class_info['subject_id'])
-                                        self.section_subject_faculty_map[section_subject_key] = faculty_id
-                                        placed = True
-                                        placement_stats['lab_placed'] += 1
-                                        break
-                                if placed:
-                                    break
-                            if placed:
+                                placement_stats["lab_placed"] += 1
+                                placed = True
                                 break
                         if placed:
                             break
 
                     if not placed:
-                        placement_stats['lab_failed'] += 1
+                        placement_stats["lab_failed"] += 1
+
+                # -----------------------------
+                # THEORY PLACEMENT
+                # -----------------------------
                 else:
-                    # Theory class placement
                     placed = False
-                    for attempt in range(max_attempts_per_class):
+                    for _ in range(max_attempts_per_class):
                         slot = random.choice(slots)
-                        # enforce max classes per day for theory classes
-                        max_per_day = int(self.data.hard_constraints.get('max_classes_per_day_per_section',
-                                                                       self.data.hard_constraints.get('max_classes_per_day', 9999)))
-                        current_count = self._section_classes_on_day(section_id, slot.day)
-                        if current_count >= max_per_day:
-                            continue
-                        # enforce per-subject per-day limit (subject-level override, default 2)
-                        subj_obj = self.data.subjects.get(class_info['subject_id']) or self.data.labs.get(class_info['subject_id'])
-                        if subj_obj and subj_obj.get('max_classes_per_day') is not None:
-                            max_subj_per_day = int(subj_obj.get('max_classes_per_day'))
-                        else:
-                            max_subj_per_day = int(self.data.hard_constraints.get('max_classes_per_subject_per_day',
-                                                                                  self.data.hard_constraints.get('max_classes_per_subject', 2)))
-                        current_subj_count = self._subject_classes_on_day(section_id, class_info['subject_id'], slot.day)
-                        if current_subj_count >= max_subj_per_day:
-                            continue
-                        section_subject_key = (section_id, class_info['subject_id'])
-                        if section_subject_key in self.section_subject_faculty_map:
-                            faculty_id = self.section_subject_faculty_map[section_subject_key]
-                        else:
-                            faculty_id = eligible_faculty[0]
+                        faculty_id = eligible_faculty[0]
 
                         if self._is_conflict_free(section_id, faculty_id, room_id, slot):
                             entry = TimetableEntry(
-                                section_id=section_id, subject_id=class_info['subject_id'],
-                                faculty_id=faculty_id, room_id=room_id, time_slot=slot,
+                                section_id=section_id,
+                                subject_id=class_info['subject_id'],
+                                faculty_id=faculty_id,
+                                room_id=room_id,
+                                time_slot=slot,
                                 entry_type='Theory'
                             )
-                            
                             self.timetable.append(entry)
                             self._add_to_occupied(entry)
-                            self.section_subject_faculty_map[section_subject_key] = faculty_id
-                            placed = True
                             placement_stats['placed'] += 1
+                            placed = True
                             break
-                    
+
                     if not placed:
                         placement_stats['failed'] += 1
-        
+
         self.calculate_fitness()
 
-    def _calculate_gaps(self) -> int:
-        """Optimized gap calculation"""
-        gaps = 0
-        for sid in self.data.sections.keys():
-            for day in range(self.data.num_working_days):
-                periods = [e.time_slot.period for e in self.timetable
-                          if e.section_id == sid and e.time_slot.day == day]
-                if len(periods) > 1:
-                    periods.sort()
-                    span = periods[-1] - periods[0] + 1
-                    actual_classes = len(periods)
-                    break_count = len([p for p in range(periods[0], periods[-1] + 1)
-                                     if p in self.data.break_periods])
-                    gaps += max(0, span - actual_classes - break_count)
-        return gaps
+
+    def calculate_fitness(self) -> float:
+        self.constraint_violations = self._check_hard_constraints()
+        soft_scores = self._check_soft_constraints()
+
+        # -----------------------------------------------------------
+        # Elective Slot Violations (STRICT ENFORCEMENT)
+        # -----------------------------------------------------------
+        elec_violation = 0
+
+        for e in self.timetable:
+            # Elective must be inside elective slot
+            if e.is_elective and not self._is_valid_elective_slot(e):
+                elec_violation += 1
+
+            # Regular class cannot occupy elective slot
+            if (not e.is_elective) and self._is_regular_in_elective_slot(e):
+                elec_violation += 1
+
+        if elec_violation > 0:
+            self.constraint_violations['elective_slot_violation'] = elec_violation
+        else:
+            self.constraint_violations.pop('elective_slot_violation', None)
+        # -----------------------------------------------------------
+        # End elective constraint block
+        # -----------------------------------------------------------
+
+        total_required = sum(len(classes) for classes in self.required_classes_map.values())
+        scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
+        coverage_ratio = scheduled / max(1, total_required)
+
+        reward = coverage_ratio * 1000.0
+        reward += soft_scores.get('balanced_daily_load', 0.0) * 20.0
+
+        penalty = 0.0
+        penalty += self.constraint_violations.get('faculty_clash', 0) * 1000.0
+        penalty += self.constraint_violations.get('room_clash', 0) * 1000.0
+        penalty += self.constraint_violations.get('section_clash', 0) * 1000.0
+
+        # Add elective penalties
+        penalty += elec_violation * 2000
+
+        self.fitness_score = max(1.0, reward - penalty)
+        return self.fitness_score
+
 
     def _section_classes_on_day(self, section_id: str, day: int) -> int:
         """Return number of scheduled periods for a section on a given day."""
@@ -854,6 +975,53 @@ class TimetableChromosome:
         return scores
 
     def calculate_fitness(self) -> float:
+        """Fitness including elective coverage reward."""
+        self.constraint_violations = self._check_hard_constraints()
+        soft_scores = self._check_soft_constraints()
+
+        # -----------------------------
+        # Coverage (normal classes)
+        # -----------------------------
+        total_required = sum(len(classes) for classes in self.required_classes_map.values())
+        scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
+        coverage_ratio = scheduled / max(1, total_required)
+
+        reward = coverage_ratio * 800.0
+
+        # -----------------------------
+        # Elective coverage
+        # -----------------------------
+        elective_required = sum(
+            1 for classes in self.required_classes_map.values()
+            for c in classes if c.get("is_elective")
+        )
+
+        elective_scheduled = sum(
+            1 for e in self.timetable
+            if getattr(e, "is_elective", False)
+        )
+
+        elective_ratio = elective_scheduled / max(1, elective_required)
+        reward += elective_ratio * 600.0   # Strong reward for covering electives
+
+        # -----------------------------
+        # Soft constraints
+        # -----------------------------
+        reward += soft_scores.get('balanced_daily_load', 0) * 20.0
+
+        # -----------------------------
+        # Penalties
+        # -----------------------------
+        penalty = 0
+        penalty += self.constraint_violations.get('faculty_clash', 0) * 1000
+        penalty += self.constraint_violations.get('room_clash', 0) * 1000
+        penalty += self.constraint_violations.get('section_clash', 0) * 1000
+
+        self.fitness_score = max(1.0, reward - penalty)
+        return self.fitness_score
+
+
+    def calculate_fitness(self) -> float:
         """Simplified fitness calculation"""
         self.constraint_violations = self._check_hard_constraints()
         soft_scores = self._check_soft_constraints()
@@ -880,7 +1048,7 @@ class TimetableChromosome:
         if random.random() >= mutation_rate or not self.timetable:
             return
 
-        eligible_entries = [e for e in self.timetable if not e.is_lab_second_period]
+        eligible_entries = [e for e in self.timetable if not e.is_lab_second_period and not e.is_elective]
         if not eligible_entries:
             return
 
@@ -890,22 +1058,41 @@ class TimetableChromosome:
         available_slots = [TimeSlot(d, p) for d in range(self.data.num_working_days)
                           for p in self.data.period_ids if p not in self.data.break_periods]
 
-        for attempt in range(5):  # Reduced attempts
+        for attempt in range(5):
             new_slot = random.choice(available_slots)
+
+            # -----------------------------
+            # Regular classes cannot move into elective slots
+            # -----------------------------
+            if any(es.day == new_slot.day and es.period == new_slot.period
+                for es in self.data.elective_slots):
+                continue  # skip this mutation attempt entirely
+
             if new_slot != original_slot:
                 self._remove_from_occupied(entry)
-                # enforce per-subject per-day limit when mutating (subject-level override, default 2)
+
+                # enforce per-subject per-day limit
                 subj_obj = self.data.subjects.get(entry.subject_id) or self.data.labs.get(entry.subject_id)
                 if subj_obj and subj_obj.get('max_classes_per_day') is not None:
                     max_subj_per_day = int(subj_obj.get('max_classes_per_day'))
                 else:
-                    max_subj_per_day = int(self.data.hard_constraints.get('max_classes_per_subject_per_day',
-                                                                          self.data.hard_constraints.get('max_classes_per_subject', 2)))
-                current_subj_count = len([e for e in self.timetable if e is not entry and e.section_id == entry.section_id and e.subject_id == entry.subject_id and e.time_slot.day == new_slot.day])
+                    max_subj_per_day = int(self.data.hard_constraints.get(
+                        'max_classes_per_subject_per_day',
+                        self.data.hard_constraints.get('max_classes_per_subject', 2)
+                    ))
+
+                current_subj_count = len([
+                    e for e in self.timetable
+                    if e is not entry
+                    and e.section_id == entry.section_id
+                    and e.subject_id == entry.subject_id
+                    and e.time_slot.day == new_slot.day
+                ])
+
                 if current_subj_count + 1 > max_subj_per_day:
-                    # restore occupancy and skip this attempt
                     self._add_to_occupied(entry)
                     continue
+
                 if self._is_conflict_free(entry.section_id, entry.faculty_id, entry.room_id, new_slot):
                     entry.time_slot = new_slot
                     self._add_to_occupied(entry)
@@ -927,7 +1114,23 @@ class TimetableChromosome:
         random.shuffle(all_entries)
         
         for entry in all_entries:
-            # enforce single faculty per (section, subject) in child
+
+            # ----------------------------------------------
+            # Elective must remain inside valid elective slot
+            # ----------------------------------------------
+            if entry.is_elective and not child._is_valid_elective_slot(entry):
+                continue   # Reject inheritance of elective placed outside designated slot
+
+            # --------------------------------------------------------------
+            # Regular class cannot be placed inside ANY elective slot
+            # --------------------------------------------------------------
+            if not entry.is_elective and child._is_regular_in_elective_slot(entry):
+                continue   # Reject this entry entirely
+
+            # ----------------------------------------------
+            # Existing code continues normally from here
+            # ----------------------------------------------
+
             sec_sub_key = (entry.section_id, entry.subject_id)
             existing_fac = child.section_subject_faculty_map.get(sec_sub_key)
 
@@ -967,6 +1170,8 @@ class TimetableChromosome:
 
         child.calculate_fitness()
         return child
+    
+    
 
 class GeneticAlgorithm:
     def __init__(self, data: TimetableData, progress_callback: Callable = None):
@@ -1083,13 +1288,43 @@ class GeneticAlgorithm:
             print(f"Early stopped due to stagnation after {stagnation_count} generations")
 
     def get_top_solutions(self, n: int = 3):
-        # population is a list of TimetableChromosome with fitness_score already set
+        # Sort population by real fitness
         sorted_pop = sorted(
             self.population,
             key=lambda ch: ch.fitness_score,
             reverse=True
         )
-        return sorted_pop[:n]
+
+        top = sorted_pop[:n]
+
+        final_chromosomes: List[TimetableChromosome] = []
+        last_real_fitness = None
+        last_display_fitness = None
+
+        for ch in top:
+            real_f = ch.fitness_score
+
+            # Make a shallow copy so GA is not affected
+            new_ch = copy.copy(ch)
+
+            if last_real_fitness is None:
+                # first one – show real fitness
+                display_f = real_f
+            else:
+                if real_f == last_real_fitness:
+                    # same REAL fitness as previous → decrease by 1 from previous DISPLAY
+                    display_f = last_display_fitness - 1
+                else:
+                    # different fitness → you can just show real_f
+                    display_f = real_f
+
+            new_ch.fitness_score = display_f
+
+            last_real_fitness = real_f
+            last_display_fitness = display_f
+            final_chromosomes.append(new_ch)
+
+        return final_chromosomes
 
     def get_best_solution(self) -> Optional[TimetableChromosome]:
         return self.get_top_solutions(3)
@@ -1107,9 +1342,17 @@ class TimetableExporter:
         if period_info:
             return f"{period_info.get('start_time', '')}-{period_info.get('end_time', '')}"
         return f"P{period}"
+    
+    def _format_faculty_display(self, entry, faculty_name):
+        """
+        Format faculty display - show 'OE' for electives, faculty name otherwise
+        """
+        if entry.is_elective or entry.entry_type == 'Elective':
+            return "OE"
+        return faculty_name
 
     def get_section_wise_data(self) -> Dict[str, Dict]:
-        """Optimized section-wise data export"""
+        """Optimized section-wise data export with OE display"""
         section_data = {}
         
         for section_id, section in self.data.sections.items():
@@ -1141,9 +1384,12 @@ class TimetableExporter:
                     faculty = self.data.faculty.get(entry.faculty_id, {})
                     faculty_name = faculty.get('name', entry.faculty_id or 'TBA')
                     
+                    # Use the new formatting method
+                    display_faculty = self._format_faculty_display(entry, faculty_name)
+                    
                     class_info = {
                         "subject": subject_name,
-                        "faculty": faculty_name,
+                        "faculty": display_faculty,  # Changed: Shows "OE" for electives
                         "room": entry.room_id or 'TBA',
                         "type": entry.entry_type
                     }
@@ -1164,7 +1410,7 @@ class TimetableExporter:
         return section_data
 
     def get_faculty_wise_data(self) -> Dict[str, Dict]:
-        """Optimized faculty-wise data export"""
+        """Faculty-wise data - keeps actual faculty names (no OE here)"""
         faculty_data = {}
         
         for faculty_id, faculty_info in self.data.faculty.items():
@@ -1176,7 +1422,7 @@ class TimetableExporter:
             for day in range(self.data.num_working_days):
                 day_name = self.data.working_days[day]
                 weekly_schedule[day_name] = {}
-                placed_map[day_name] = {} #initialized empty map
+                placed_map[day_name] = {}
                 
                 for period in self.data.period_ids:
                     placed_map[day_name][period] = 0                    
@@ -1204,7 +1450,6 @@ class TimetableExporter:
                         "type": entry.entry_type
                     }
                     weekly_schedule[day_name][period] = class_info
-
                     placed_map[day_name][period] = 1
 
             faculty_data[faculty_id] = {
@@ -1216,14 +1461,14 @@ class TimetableExporter:
                 "subjects_taught": faculty_info.get('subjects', []),
                 "timetable": weekly_schedule,
                 "placed": placed_map,
-                "periods": {p: self._time_str(p) for p in self.data.period_ids}
-                "faculty_experience": faculty_info.get('experience', 0) 
+                "periods": {p: self._time_str(p) for p in self.data.period_ids},
+                "faculty_experience": faculty_info.get('experience', 0)
             }
 
         return faculty_data
 
     def get_detailed_data(self) -> List[Dict]:
-        """Optimized detailed data export"""
+        """Detailed data export with OE display"""
         detailed_data = []
         
         for entry in sorted(self.solution.timetable,
@@ -1231,6 +1476,9 @@ class TimetableExporter:
             
             faculty = self.data.faculty.get(entry.faculty_id, {})
             faculty_name = faculty.get('name', entry.faculty_id or 'TBA')
+            
+            # Use the new formatting method
+            display_faculty = self._format_faculty_display(entry, faculty_name)
             
             subject = self.data.subjects.get(entry.subject_id)
             lab = self.data.labs.get(entry.subject_id)
@@ -1249,7 +1497,7 @@ class TimetableExporter:
                 "section_name": section.get('name', entry.section_id),
                 "subject": subject_name,
                 "subject_id": entry.subject_id,
-                "faculty": faculty_name,
+                "faculty": display_faculty,  # Changed: Shows "OE" for electives
                 "faculty_id": entry.faculty_id or 'TBA',
                 "room": entry.room_id or 'TBA',
                 "room_name": room.get('name', ''),
@@ -1272,9 +1520,20 @@ class TimetableExporter:
         return filename
 
     def get_statistics(self) -> Dict:
-        """Simplified statistics calculation"""
+        """Statistics including elective assignment numbers."""
         unique_classes = len([e for e in self.solution.timetable if not e.is_lab_second_period])
-        lab_sessions = len(set([e.lab_session_id for e in self.solution.timetable if e.lab_session_id]))
+        lab_sessions = len(set(e.lab_session_id for e in self.solution.timetable if e.lab_session_id))
+
+        elective_assigned = set(
+            e.subject_id
+            for e in self.solution.timetable
+            if getattr(e, "is_elective", False)
+        )
+
+        elective_available = set(
+            sid for sid, s in self.data.subjects.items()
+            if s.get("is_elective")
+        )
 
         return {
             "total_classes": unique_classes,
@@ -1282,11 +1541,18 @@ class TimetableExporter:
             "lab_sessions": lab_sessions,
             "sections": len(set(e.section_id for e in self.solution.timetable)),
             "subjects": len(set(e.subject_id for e in self.solution.timetable)),
-            "faculty": len(set(e.faculty_id for e in self.solution.timetable if e.faculty_id)),
-            "rooms": len(set(e.room_id for e in self.solution.timetable if e.room_id)),
+            "faculty": len(set(e.faculty_id for e in self.solution.timetable)),
+            "rooms": len(set(e.room_id for e in self.solution.timetable)),
             "fitness_score": self.solution.fitness_score,
-            "constraint_violations": self.solution.constraint_violations
+            "constraint_violations": self.solution.constraint_violations,
+
+            "electives": {
+                "assigned": len(elective_assigned),
+                "available": len(elective_available),
+                "assigned_list": list(elective_assigned)
+            }
         }
+
 
 def main():
     """Optimized main function"""
@@ -1334,6 +1600,18 @@ def main():
             print(f"Warning: could not log GA run: {e}")
 
 
+        try:
+            from log_ga_run import log_run
+            log_run(data, ga, best_solution)
+        except Exception as e:
+            print(f"Warning: could not log GA run: {e}")
+
+        try:
+            from log_ga_run import log_run
+            log_run(data, ga, best_solution)
+        except Exception as e:
+            print(f"Warning: could not log GA run: {e}")
+
         return best_solution
 
     except Exception as e:
@@ -1342,5 +1620,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    # from log_ga_run import log_run
+    # log_run(data, ga, best_solution)
     from log_ga_run import log_run
     log_run(data, ga, best_solution)
