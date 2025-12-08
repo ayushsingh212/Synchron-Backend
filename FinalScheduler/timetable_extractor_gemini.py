@@ -236,13 +236,13 @@ You are an expert university data extractor. Your task is to analyze the provide
 3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
 4. Find all subjects mentioned - create subject IDs and names
 5. DO NOT SKIP Labs. They must be added in both subject and lab fields. LABS MUST BE IN BOTH "subject" and "labs"
-5. Identify faculty names - generate faculty IDs (F001, F002, etc.)
-6. Extract section names - create section IDs
-7. Find room information - create room IDs
-8. Map subjects to faculty based on timetable assignments
-9. Infer department information from section names
-10. Create appropriate constraints based on what's in the document
-11. Don't use ... to skip parts, use proper delimiters
+6. Identify faculty names - generate faculty IDs (F001, F002, etc.)
+7. Extract section names - create section IDs
+8. Find room information - create room IDs
+9. Map subjects to faculty based on timetable assignments
+10. Infer department information from section names
+11. Create appropriate constraints based on what's in the document
+12. Don't use ... to skip parts, use proper delimiters
 
 ## CRITICAL INSTRUCTIONS FOR TIME SLOTS:
 - Extract ONLY the periods that are explicitly defined in the document
