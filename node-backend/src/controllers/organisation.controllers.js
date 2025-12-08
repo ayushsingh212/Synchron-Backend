@@ -128,17 +128,20 @@ const registerOrganisation = asyncHandler(async (req, res) => {
   }
 
   const avatarLocalPath = req?.file?.path;
-  if (!avatarLocalPath) throw new ApiError(400, "Avatar file is required");
-
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  // if (!avatarLocalPath) throw new ApiError(400, "Avatar file is required");
+   let avatar;
+  if(avatarLocalPath){
+  avatar = await uploadOnCloudinary(avatarLocalPath);
   if (!avatar) throw new ApiError(500, "Failed to upload avatar");
+  }
+ 
 
   const organisation = await Organisation.create({
     organisationName,
     organisationEmail,
     password,
     organisationContactNumber,
-    avatar: avatar.url,
+    avatar: avatar?.url || "http",
   });
 
   const organisationObj = organisation.toObject ? organisation.toObject() : { ...organisation };
