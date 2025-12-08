@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { createSenate, listSenates, removeSenate } from "../controllers/authority.controller";
-import { verifyJWT } from "../middlewares/auth.middleware";
-import { verifyAdminToken } from "../middlewares/admin.middleware";
+import { createSenate, listSenates, removeSenate } from "../controllers/authority.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
+import { verifyAdminToken } from "../middlewares/admin.middleware.js";
 
 
 
