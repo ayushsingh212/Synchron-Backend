@@ -640,6 +640,7 @@ class TimetableChromosome:
 
         return eligible
 
+
     def _get_consecutive_slots(self, day: int) -> List[Tuple[TimeSlot, TimeSlot]]:
         """Find consecutive slot sequences for a given day.
 
@@ -1667,6 +1668,20 @@ def main():
         print(f"Lab sessions: {stats['lab_sessions']}")
         print(f"Constraint violations: {best_solution.constraint_violations}")
 
+                # --- NEW: log this GA run ---
+        try:
+            from log_ga_run import log_run
+            log_run(data, ga, best_solution)
+        except Exception as e:
+            print(f"Warning: could not log GA run: {e}")
+
+
+        try:
+            from log_ga_run import log_run
+            log_run(data, ga, best_solution)
+        except Exception as e:
+            print(f"Warning: could not log GA run: {e}")
+
         return best_solution
 
     except Exception as e:
@@ -1675,3 +1690,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+    from log_ga_run import log_run
+    log_run(data, ga, best_solution)
