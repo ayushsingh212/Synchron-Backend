@@ -89,186 +89,187 @@ class TimetableExtractor:
             return self._get_builtin_prompt()
 
     def _get_builtin_prompt(self) -> str:
-        """Return optimized built-in extraction prompt for Cerebras"""
+        """Return optimized built-in extraction prompt for Cerebras with full elective support"""
         return """
-# Timetable Data Extractor Prompt
+    # Timetable Data Extractor Prompt
 
-You are an expert university data extractor. Your task is to analyze the provided university data document and extract structured information.
+    You are an expert university data extractor. Your task is to analyze the provided university data document and extract structured information.
 
-## CRITICAL INSTRUCTIONS:
+    ## CRITICAL INSTRUCTIONS:
 
-1. You MUST output ONLY valid JSON - no additional text, explanations, or markdown formatting.
-2. The entire response must be a single JSON object.
-3. Do NOT use code blocks or markdown syntax like ```json.
-4. Extract ALL available information from the document.
-5. Create comprehensive mappings for subjects, faculty, and sections.
-6. Generate appropriate IDs where missing.
-7. Infer reasonable defaults for missing information.
+    1. You MUST output ONLY valid JSON - no additional text, explanations, or markdown formatting.
+    2. The entire response must be a single JSON object.
+    3. Do NOT use code blocks or markdown syntax like ```json.
+    4. Extract ALL available information from the document.
+    5. Create comprehensive mappings for subjects, faculty, and sections.
+    6. Generate appropriate IDs where missing.
+    7. Infer reasonable defaults for missing information.
 
-## REQUIRED JSON STRUCTURE:
+    ## REQUIRED JSON STRUCTURE:
 
-```json
-{{
-  "college_info": {{
-    "name": "College Name from Document",
-    "session": "2025-26",
-    "effective_date": "2025-09-15"
-  }},
-  "time_slots": {{
-    "periods": [
-      {{"id": 1, "start_time": "08:00", "end_time": "08:50"}},
-      {{"id": 2, "start_time": "08:50", "end_time": "09:40"}},
-      {{"id": 3, "start_time": "09:40", "end_time": "10:30"}},
-      {{"id": 4, "start_time": "10:45", "end_time": "11:35"}},
-      {{"id": 5, "start_time": "11:35", "end_time": "12:25"}},
-      {{"id": 6, "start_time": "12:25", "end_time": "13:15"}},
-      {{"id": 7, "start_time": "14:15", "end_time": "15:05"}},
-      {{"id": 8, "start_time": "15:05", "end_time": "15:55"}}
-    ],
-    "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-    "break_periods": [4, 6],
-    "lunch_period": 6,
-    "mentorship_period": 4
-  }},
-  "departments": [
     {{
-      "dept_id": "CSE",
-      "name": "Computer Science Engineering",
-      "sections": [
-        {{
-          "section_id": "CSE_3_A",
-          "name": "CSE-3A",
-          "semester": 3,
-          "year": 2,
-          "room": "CL-301",
-          "student_count": 60,
-          "coordinator": "HOD CSE",
-          "specialization": ""
-        }}
-      ]
-    }}
-  ],
-  "subjects": [
-    {{
-      "subject_id": "CS301",
-      "name": "Data Structures",
-      "type": "Theory",
-      "credits": 4,
-      "lectures_per_week": 4,
-      "semester": 3,
-      "departments": ["CSE"],
-      "specialization": "",
-      "min_classes_per_week": 3,
-      "max_classes_per_day": 2,
-      "tutorial_sessions": 0
-    }}
-  ],
-  "labs": [
-    {{
-      "lab_id": "CS301L",
-      "name": "Data Structures Lab",
-      "type": "Lab",
-      "credits": 2,
-      "sessions_per_week": 1,
-      "duration_hours": 2,
-      "semester": 3,
-      "departments": ["CSE"],
-      "specialization": "",
-      "lab_rooms": ["LAB-1", "LAB-2"]
-    }}
-  ],
-  "faculty": [
-    {{
-      "faculty_id": "F001",
-      "name": "Dr. Faculty Name",
-      "department": "CSE",
-      "designation": "Professor",
-      "subjects": ["CS301", "CS301L"],
-      "max_hours_per_week": 20,
-      "avg_leaves_per_month": 2,
-      "preferred_time_slots": [1, 2, 3, 4, 5, 7, 8]
-    }}
-  ],
-  "rooms": [
-    {{
-      "room_id": "CL-301",
-      "name": "Classroom 301",
-      "type": "Classroom",
-      "capacity": 70,
-      "department": "CSE",
-      "equipment": ["Projector", "Smart Board"]
-    }}
-  ],
-  "subject_name_mapping": {{
-    "DS": "CS301",
-    "Data Structures": "CS301"
-  }},
-  "constraints": {{
-    "hard_constraints": {{
-      "no_faculty_clash": true,
-      "no_room_clash": true,
-      "no_section_clash": true,
-      "max_classes_per_subject_per_day": 2,
-      "max_classes_per_day_per_section": 7,
-      "lab_duration_consecutive": true
+    "college_info": {{
+        "name": "College Name from Document",
+        "session": "2025-26",
+        "effective_date": "2025-09-15"
     }},
-    "soft_constraints": {{
-      "balanced_daily_load": {{"weight": 0.3, "max_deviation": 2}},
-      "faculty_preference_slots": {{"weight": 0.2}},
-      "minimize_faculty_travel": {{"weight": 0.15}}
+    "time_slots": {{
+        "periods": [
+        {{"id": 1, "start_time": "08:00", "end_time": "08:50"}},
+        {{"id": 2, "start_time": "08:50", "end_time": "09:40"}},
+        {{"id": 3, "start_time": "09:40", "end_time": "10:30"}},
+        {{"id": 4, "start_time": "10:45", "end_time": "11:35"}},
+        {{"id": 5, "start_time": "11:35", "end_time": "12:25"}},
+        {{"id": 6, "start_time": "12:25", "end_time": "13:15"}},
+        {{"id": 7, "start_time": "14:15", "end_time": "15:05"}},
+        {{"id": 8, "start_time": "15:05", "end_time": "15:55"}}
+        ],
+        "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    }},
+
+    "elective_slots": [
+    {{ "day_name": "Friday", "period": 7 }},
+    {{ "day_name": "Thursday", "period": 5 }}
+    ],
+
+    "departments": [
+        {{
+        "dept_id": "CSE",
+        "name": "Computer Science Engineering",
+        "sections": [
+            {{
+            "section_id": "CSE_3_A",
+            "name": "CSE-3A",
+            "semester": 3,
+            "year": 2,
+            "room": "CL-301",
+            "student_count": 60,
+            "coordinator": "HOD CSE",
+            "specialization": "",
+            "electives": ["CSE105", "CSE106"]
+            }}
+        ]
+        }}
+    ],
+
+    "subjects": [
+        {{
+        "subject_id": "CS301",
+        "name": "Data Structures",
+        "type": "Theory",
+        "credits": 4,
+        "lectures_per_week": 4,
+        "semester": 3,
+        "departments": ["CSE"],
+        "specialization": "",
+        "min_classes_per_week": 3,
+        "max_classes_per_day": 2,
+        "tutorial_sessions": 0,
+        "is_elective": false
+        }}
+    ],
+
+    "labs": [
+        {{
+        "lab_id": "CS301L",
+        "name": "Data Structures Lab",
+        "type": "Lab",
+        "credits": 2,
+        "sessions_per_week": 1,
+        "duration_hours": 2,
+        "semester": 3,
+        "departments": ["CSE"],
+        "specialization": "",
+        "lab_rooms": ["LAB-1", "LAB-2"]
+        }}
+    ],
+
+    "faculty": [
+        {{
+        "faculty_id": "F001",
+        "name": "Dr. Faculty Name",
+        "department": "CSE",
+        "designation": "Professor",
+        "subjects": ["CS301", "CS301L"],
+        "max_hours_per_week": 20,
+        "avg_leaves_per_month": 2,
+        "preferred_time_slots": [1, 2, 3, 4, 5, 7, 8],
+        "faculty_experience" : 6
+        }}
+    ],
+
+    "rooms": [
+        {{
+        "room_id": "CL-301",
+        "name": "Classroom 301",
+        "type": "Classroom",
+        "capacity": 70,
+        "department": "CSE",
+        "equipment": ["Projector", "Smart Board"]
+        }}
+    ],
+
+    "subject_name_mapping": {{
+        "DS": "CS301",
+        "Data Structures": "CS301"
+    }},
+
+    "constraints": {{
+        "hard_constraints": {{
+        "no_faculty_clash": true,
+        "no_room_clash": true,
+        "no_section_clash": true,
+        "max_classes_per_subject_per_day": 2,
+        "max_classes_per_day_per_section": 7,
+        "lab_duration_consecutive": true
+        }},
+        "soft_constraints": {{
+        "balanced_daily_load": {{"weight": 0.3, "max_deviation": 2}},
+        "faculty_preference_slots": {{"weight": 0.2}},
+        "minimize_faculty_travel": {{"weight": 0.15}}
+        }}
+    }},
+
+    "genetic_algorithm_params": {{
+        "population_size": 50,
+        "generations": 50,
+        "mutation_rate": 0.2,
+        "crossover_rate": 0.8,
+        "elite_size": 5,
+        "early_stopping_patience": 10
     }}
-  }},
-  "genetic_algorithm_params": {{
-    "population_size": 50,
-    "generations": 50,
-    "mutation_rate": 0.2,
-    "crossover_rate": 0.8,
-    "elite_size": 5,
-    "early_stopping_patience": 10
     }}
-}}
-````
 
-## EXTRACTION RULES:
+    ## EXTRACTION RULES:
 
-1. Look for time slots (periods) - extract start/end times EXACTLY as shown in the document
-2. DO NOT modify, add, or remove time periods
-3. DO NOT assume break_periods, lunch_period, or mentorship_period - ONLY include if explicitly shown in the document
-4. Find all subjects mentioned - create subject IDs and names
-5. DO NOT SKIP Labs. They must be added in both subject and lab fields. LABS MUST BE IN BOTH "subject" and "labs"
-6. Identify faculty names - generate faculty IDs (F001, F002, etc.)
-7. Extract section names - create section IDs
-8. Find room information - create room IDs
-9. Map subjects to faculty based on timetable assignments
-10. Infer department information from section names
-11. Create appropriate constraints based on what's in the document
-12. Don't use ... to skip parts, use proper delimiters
+    1. Extract time periods EXACTLY as they appear in the document.
+    2. DO NOT add break/lunch/mentorship unless explicitly shown.
+    3. Detect elective subjects and set `"is_elective": true` for them.
+    4. Each section with electives MUST include `"electives": ["SUB1","SUB2"]`.
+    5. If fixed elective periods exist, place them under `"elective_slots"`.
+    6. DO NOT skip labs — include in both `"subjects"` and `"labs"`.
+    7. Extract and map faculty to subjects.
+    8. Output ONLY valid JSON.
 
-## CRITICAL INSTRUCTIONS FOR TIME SLOTS:
-- Extract ONLY the periods that are explicitly defined in the document
-- Use the EXACT start/end times - do NOT round or enhance
-- If break_periods are shown in the document, include them
-- If there's a lunch period marked in the document, include lunch_period
-- If mentorship/HOD period is explicitly mentioned, include mentorship_period
-- If any of these are NOT in the document, omit them from the extracted time_slots
-- working_days should be ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"] unless the document shows otherwise
+    ## CRITICAL ELECTIVE RULES:
 
-## IMPORTANT:
+    - Elective subjects → `"is_elective": true`
+    - Sections choosing electives → `"electives": ["S1","S2"]`
+    - Global slot for electives → `"elective_slots": {{ "1": {{"day_name": "Friday", "period": 7}} }}`
 
-- Extract REAL data from the document, don't just use template values
-- If you find specific time periods, use those instead of the template times
-- Map actual faculty names from the document
-- Use actual subject names and codes from the document
-- Create realistic section names based on what you see
-- NEVER auto-assume mentorship or break periods
-- MAKE SURE TO PROVIDE VALID JSON
+    ## IMPORTANT:
 
-## Document content to analyze:
+    - Use ONLY data found in the document.
+    - No assumptions.
+    - No markdown formatting.
 
-{document_text}
+    ## Document content to analyze:
 
-REMEMBER: Output ONLY the JSON structure with extracted data. No explanations, no code blocks, no markdown formatting.
-"""
+    {document_text}
+
+    REMEMBER: Output ONLY the JSON structure. No explanations, no code blocks.
+    """
+
 
     def _generate_with_cerebras(self, prompt: str, max_tokens: int = 70000) -> tuple:
         """Generate response using Cerebras API"""
