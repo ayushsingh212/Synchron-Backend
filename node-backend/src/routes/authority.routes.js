@@ -12,3 +12,6 @@ router.use(verifyJWT,verifyAdminToken);
 router.post("/addSenate",createSenate);
 router.delete("/removeSenate/:senateId",removeSenate );
 router.get("/listSenates",listSenates ); 
+
+
+export default router;
