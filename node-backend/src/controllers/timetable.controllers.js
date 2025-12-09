@@ -1301,7 +1301,7 @@ export const getSectionTimeTablesForSpecific = asyncHandler(
   }
 );
 export const getGeneratedSolutions = asyncHandler(async (req, res) => {
-  const {senateId}  = req.senate;
+  const {senateId}  = req.senate || req.organisation?._id;
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
 
