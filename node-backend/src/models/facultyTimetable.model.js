@@ -8,6 +8,12 @@ const timetableSchema = new Schema(
       type:Schema.Types.ObjectId,
       ref:"Organisation"
     },
+    organisationEmail:{
+      type:String,
+      unique:true,
+      trim:true,
+      lowercase:true
+    },
      semester:{
       type:String,
       required:true,

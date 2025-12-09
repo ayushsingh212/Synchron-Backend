@@ -12,6 +12,7 @@ import { OrganisationData } from "../models/organisationData.model.js";
 import { nanoid } from "nanoid";
 
 import { GeneratedSolution } from "../models/generatedSolution.model.js";
+import { TimetableRequest } from "../models/timetableRequest.model.js";
 
 const { FLASK_URL } = process.env;
 
@@ -970,7 +971,67 @@ export const updateFacultyTimetable = asyncHandler(async (req, res) => {
     );
   }
 });
+export const getAFacultyTimetableID = asyncHandler(async (req, res) => {
 
+
+  const organisationId = req.organisation?._id;
+  const { faculty_id } = req.params;
+  
+  try {
+    if (!faculty_id) {
+      throw new ApiError(400, "Faculty ID is required");
+    }
+
+ 
+
+
+
+    const existingFaculty = await FacultyTimetable.findOne({ faculty_id });
+    if (!existingFaculty) {
+      throw new ApiError(404, `Faculty with ID ${faculty_id} not found`);
+    }
+
+  
+
+    if (!updatedFaculty) {
+      throw new ApiError(500, "Failed to update faculty timetable");
+    }
+
+    console.log(`Faculty timetable updated for ID: ${faculty_id}`);
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(
+          200,
+          existingFaculty,
+          "Faculty timetable updated successfully"
+        )
+      );
+  } catch (error) {
+    console.error("Error in updateFacultyTimetable:", error);
+
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    // Handle MongoDB validation errors
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err) => err.message);
+      throw new ApiError(400, `Validation error: ${errors.join(", ")}`);
+    }
+
+    // Handle cast errors (invalid ID format)
+    if (error.name === "CastError") {
+      throw new ApiError(400, "Invalid faculty ID format");
+    }
+
+    throw new ApiError(
+      500,
+      "Internal server error while updating faculty timetable"
+    );
+  }
+});
 /**
  * Get single faculty timetable by ID
  */
@@ -1107,24 +1168,27 @@ export const getSectionTimetablesByGroup = asyncHandler(async (req, res) => {
 
 export const getFacultyTimeTablesForSpecific = asyncHandler(
   async (req, res) => {
-    const organisationId = req.organisation?._id;
+    const organisationId = req.organisation?._id || req.query.organisationId|| req.body.organisationId;
     const { course, year, semester } = req.query;
 
     console.log("here are the coming things", course, year, semester);
-    if (!organisationId) {
-      throw new ApiError(401, "Login first");
-    }
+
 
     if (!course || !year || !semester) {
       throw new ApiError(400, "Course, year, and semester are required");
     }
+ 
 
-    const docs = await FacultyTimetable.find({
+    const  docs = await FacultyTimetable.find({
       organisationId,
       course: course.toLowerCase().trim(),
       year: year.toLowerCase().trim(),
       semester: semester.toLowerCase().trim(),
     }).lean();
+
+
+
+     
 
     console.log("Here is the docs", docs);
 
@@ -1220,7 +1284,7 @@ export const getSectionTimeTablesForSpecific = asyncHandler(
   }
 );
 export const getGeneratedSolutions = asyncHandler(async (req, res) => {
-  const {senateId}  = req.senate;
+  const {senateId}  = req.senate || req.organisation?._id;
   const organisationId = req.organisation?._id;
   const { course, year, semester } = req.query;
 
@@ -1371,7 +1435,7 @@ export const getGeneratedSolutionById = asyncHandler(async (req, res) => {
 export const approveGeneratedSolution = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { solutionId } = req.body;
-
+    const senateId = req.organisation._id
   if (!organisationId) throw new ApiError(401, "Login first");
   if (!solutionId) throw new ApiError(400, "solutionId is required");
 
@@ -1479,6 +1543,14 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
     { _id: sol._id },
     { $set: { isApproved: true } }
   );
+  
+    // await TimetableRequest.findOneAndUpdate({seneteId,course,year,semester},{
+    //   $set:{
+    //     status:"approved"
+    //   }
+    // },{
+    //   new:true
+    // })
 
   return res.status(200).json(
     new ApiResponse(

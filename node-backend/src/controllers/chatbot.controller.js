@@ -1,244 +1,179 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import axios from "axios";
+import ragContext from "../models/ragContext.model.js";
+import ApiError from "../utils/apiError.js";
+import ApiResponse from "../utils/apiResponse.js";
+import dotenv from "dotenv"
 
+// -------------------------------
+// IN-MEMORY CACHE
+// -------------------------------
+const contextCache = new Map();  
+const rateLimit = new Map();     
+
+const CEREBRAS_API_KEY=`csk-9m4jhn59dmk22fdpmdxxk96d2e4dd3ewwjevf5erry5dj89e`
+// Cache Time = 15 minutes
+const CACHE_TTL = 15 * 60 * 1000;
+// Min time between chatbot requests = 2 seconds
+const MIN_INTERVAL = 2000;
+
+
+// ---------------------------------
+// HELPER: GET OR BUILD CONTEXT
+// ---------------------------------
+async function getContextForOrganisation(orgId) {
+  const now = Date.now();
+
+  const cached = contextCache.get(orgId);
+  if (cached && now - cached.timestamp < CACHE_TTL) {
+    return cached.data;
+  }
+
+  const contexts = await ragContext.find({ organisationId: orgId }).lean();
+
+  let mergedText = "";
+  contexts.forEach(ctx => {
+    ctx.uploadedDocuments.forEach(doc => {
+      if (doc.extractedText) {
+        mergedText += `\n\n${doc.fileName}:\n${doc.extractedText}`;
+      }
+    });
+  });
+
+  if (!mergedText.trim()) mergedText = "No institutional document context available.";
+
+  // Cerebras supports large context — no need to slice aggressively  
+  if (mergedText.length > 150000) {
+    mergedText = mergedText.slice(-150000);  // keep last 150k chars
+  }
+
+  contextCache.set(orgId, {
+    timestamp: now,
+    data: mergedText
+  });
+
+  return mergedText;
+}
+
+
+// ---------------------------------
+// MAIN CHATBOT CONTROLLER (CEREBRAS)
+// ---------------------------------
 export const chatBot = asyncHandler(async (req, res) => {
   const { message } = req.body;
 
-  if (!message || message.trim() === "") {
-    return res.status(400).json({ 
-      success: false,
-      reply: "Please provide a valid message." 
-    });
+  if (!message?.trim()) {
+    return res.status(400).json({ success: false, reply: "Please provide a valid message." });
   }
 
+  const orgId = req.organisation?._id;
+  if (!orgId) {
+    return res.status(401).json({ success: false, reply: "Please login first." });
+  }
+
+
+  // ---------------------------
+  // RATE LIMITING (2 sec per org)
+  // ---------------------------
+  const lastCall = rateLimit.get(orgId) || 0;
+  const now = Date.now();
+
+  if (now - lastCall < MIN_INTERVAL) {
+    return res.status(429).json({
+      success: false,
+      reply: "Please wait a moment before sending another message."
+    });
+  }
+  rateLimit.set(orgId, now);
+
+
+  // ---------------------------
+  // GET RAG CONTEXT
+  // ---------------------------
+  const documentContext = await getContextForOrganisation(orgId);
+
+
+  // -------------------------------
+  // BUILD THE RAG PROMPT
+  // -------------------------------
+  const prompt = `
+You are the official AI assistant for Synchron and AiCrona.
+
+You MUST answer the user's question STRICTLY using the following institutional documents.
+If answer is not in the context, say:
+"I'm not able to find this information in your uploaded documents."
+
+================ DOCUMENT CONTEXT START ================
+${documentContext}
+================ DOCUMENT CONTEXT END ==================
+
+USER QUESTION:
+${message.trim()}
+
+Strict rules:
+- Do NOT hallucinate
+- Do NOT invent facts
+- Use clean English
+- No duplicate characters
+- Keep answer short and accurate
+
+FINAL ANSWER:
+`;
+
+  // -----------------------------------
+  // CALL CEREBRAS API
+  // -----------------------------------
   try {
-    const prompt = `You are the official AI assistant for Synchron and AiCrona platform.
-
-ABOUT SYNCHRON & AICRONA:
-- SyncChron is the development team that created AiCrona
-- SchedulifyAi is an AI-powered university timetable scheduling platform
-- Our mission is to simplify academic scheduling through artificial intelligence
-- Ayush Singh is the backend Developer of Team SyncChron
-- The other team members are Bhavya Bhardwaj,She is COA(Computer Organisation And Architecture) with academic excellence of 9+ CGPA ,She is also going to be the founder of the Upcoming Schedulify Foundation, She is Designer,Aaryan Aggarwal ,he is Designer,Divyanshu Dev,Aaryan Kumar both are ML Developer ,Amresh Chaurasiya Frontend Developer
-
-PLATFORM WORKFLOW & FEATURES:
-1. Organization Registration & Setup
-   - Educational institutions register and create admin accounts
-   - Admin accesses the Institution Dashboard after login
-   - Secure authentication and role-based access control
-
-2. Academic Data Management
-   - In Academic Data Tab, admin selects: Course, Year, Semester for timetable generation
-   - Admin can add/manage: Courses, Years, Semesters, Subjects, Faculty, Sections
-   - Data Taker feature allows manual entry or PDF upload for bulk data
-   - System auto-parses PDF content and auto-fills information fields
-
-3. AI Timetable Generation
-   - Admin clicks 'Generate And Save Timetable' for specific course-year-semester
-   - AiCrona's AI engine generates 3 optimized timetable variants
-   - Optimization considers: Faculty availability, room capacity, subject priorities
-   - Each variant shows section → faculty → room level details
-
-4. Timetable Management
-   - Admin reviews and compares all 3 timetable variants
-   - Selects and approves the most suitable variant
-   - Approved timetable becomes the official schedule
-   - All generated timetables accessible in Timetable Manager tab
-
-RESPONSE REQUIREMENTS:
-- Provide clear, natural English responses without any character duplication
-- Do NOT duplicate characters or add extra spaces between words
-- Use normal spacing and proper punctuation
-- Respond in a conversational but professional tone
-- If you don't know something, admit it and guide the user to contact support
-- Keep responses concise but helpful
-
-USER QUESTION: ${message.trim()}
-
-Please provide a helpful response that directly answers the user's question.`;
-
-    const url = process.env.GEMINI_URL;
-    
-    if (!url) {
-      console.error("Gemini URL not configured");
-      return res.status(500).json({
-        success: false,
-        reply: "Service configuration error. Please contact support.",
-        error: "GEMINI_URL environment variable not set"
-      });
-    }
-
-    console.log("Sending request to Gemini API...");
-    console.log("User Message:", message);
-
+    console.log("api",CEREBRAS_API_KEY)
     const response = await axios.post(
-      url,
+      "https://api.cerebras.ai/v1/chat/completions",
       {
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.3, // Lower temperature for more consistent output
-          topK: 20,
-          topP: 0.8,
-          maxOutputTokens: 1024,
-        },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_MEDIUM_AND_ABOVE"
-          }
-        ]
+        model: "gpt-oss-120b", 
+        messages: [
+          { role: "system", content: "You are a strict RAG assistant." },
+          { role: "user", content: prompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 900
       },
       {
-        timeout: 30000,
         headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Accept-Charset': 'utf-8'
-        }
+          "Authorization": `Bearer ${CEREBRAS_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        timeout: 20000
       }
     );
 
-    console.log("Gemini API Response Status:", response.status);
+    let reply = response.data?.choices?.[0]?.message?.content || "";
+    reply = aggressiveCleanResponse(reply);
 
-    let reply = extractReply(response.data);
-    
-    if (!reply) {
-      throw new Error("Could not extract valid reply from Gemini response");
-    }
-
-    console.log("Raw Reply from Gemini:", reply);
-    console.log("Reply Length:", reply.length);
-
-    // Aggressive cleaning for the duplication issue
-    const cleanReply = aggressiveCleanResponse(reply);
-    
-    console.log("After Cleaning:", cleanReply);
-
-    if (!cleanReply || cleanReply.trim().length < 5) {
-      throw new Error("Cleaned response is empty or too short");
-    }
-
-    res.json({ 
+    return res.json({
       success: true,
       reply,
-      metadata: {
-        originalLength: reply.length,
-        cleanedLength: cleanReply.length,
-        timestamp: new Date().toISOString()
-      }
+      contextUsed: true
     });
 
   } catch (err) {
-    console.error("ChatBot Error:", {
-      message: err.message,
-      status: err.response?.status,
-      data: err.response?.data
-    });
+    console.error("Cerebras Error:", err?.response?.data || err?.message);
 
-    let userMessage = "I'm experiencing technical difficulties. Please try again in a moment.";
-    
-    if (err.response?.status === 429) {
-      userMessage = "I'm currently processing too many requests. Please wait a moment and try again.";
-    } else if (err.response?.status === 400) {
-      userMessage = "There was an issue with the request. Please check your input and try again.";
-    } else if (err.code === 'ECONNABORTED') {
-      userMessage = "The request took too long to process. Please try again.";
-    }
-
-    res.status(500).json({ 
+    return res.status(500).json({
       success: false,
-      reply: userMessage
+      reply: "I'm experiencing technical difficulties. Please try again shortly."
     });
   }
 });
 
-// Function to extract reply from various Gemini response formats
-function extractReply(data) {
-  if (!data) return null;
 
-  // Try multiple response formats
-  if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
-    return data.candidates[0].content.parts[0].text;
-  }
-  
-  if (data.choices?.[0]?.message?.content) {
-    return data.choices[0].message.content;
-  }
-  
-  if (data.text) {
-    return data.text;
-  }
-  
-  if (data.response) {
-    return data.response;
-  }
-
-  // Log unexpected format for debugging
-  console.log("Unexpected response format:", JSON.stringify(data, null, 2));
-  return null;
-}
-
-// Aggressive cleaning function for the character duplication issue
+// -------------------------------------
+// CLEAN DUPLICATION BUG
+// -------------------------------------
 function aggressiveCleanResponse(text) {
-  if (!text || typeof text !== "string") {
-    return "I apologize, but I'm having trouble generating a response. Please try again.";
-  }
+  if (!text) return "No valid response.";
 
-  let cleaned = text;
-
-  // Remove 'undefined' strings
-  cleaned = cleaned.replace(/undefined/gi, '');
-  
-  // Fix the specific duplication pattern: "hheelllloo" -> "hello"
-  // This pattern appears to be doubling each character
-  cleaned = cleaned.replace(/([a-zA-Z])\1/g, '$1');
-  
-  // Fix triple or more duplicates
-  cleaned = cleaned.replace(/([a-zA-Z])\1+/g, '$1');
-  
-  // Fix duplicated words with spaces: "hello  hello" -> "hello"
-  cleaned = cleaned.replace(/(\b\w+\b)\s+\1/g, '$1');
-  
-  // Fix the specific pattern you're seeing: "yy n n cc hh rr oo nn" -> "synchron"
-  // This handles spaces between duplicated characters
-  cleaned = cleaned.replace(/([a-zA-Z])\s+\1/g, '$1');
-  
-  // Remove extra spaces (multiple spaces to single space)
-  cleaned = cleaned.replace(/\s+/g, ' ');
-  
-  // Remove any remaining special characters or artifacts
-  cleaned = cleaned.replace(/[��]/g, '');
-  cleaned = cleaned.replace(/[^\x20-\x7E\u0900-\u097F]/g, ''); // Keep only printable chars and Devanagari
-  
-  // Ensure proper sentence structure
-  cleaned = cleaned.replace(/\s+\./g, '.');
-  cleaned = cleaned.replace(/\s+,/g, ',');
-  cleaned = cleaned.replace(/\s+!/g, '!');
-  cleaned = cleaned.replace(/\s+\?/g, '?');
-  
-  // Trim and capitalize first letter
-  cleaned = cleaned.trim();
-  if (cleaned.length > 0) {
-    cleaned = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
-  }
-
-  // Final validation - if still corrupted, provide fallback
-  // if (isStillCorrupted(cleaned)) {
-  //   return "I apologize, but I'm experiencing technical issues with my response generation. Please try rephrasing your question or contact support if the problem continues.";
-  // }
-
-  return cleaned;
-}
-
-// Check if text still has the duplication corruption
-function isStillCorrupted(text) {
-  if (!text) return true;
-  
-  // Check for excessive single character repetition
-  const corruptionPattern = /(.)\1\1/; // Three or more of the same character in a row
-  const spacePattern = /([a-zA-Z])\s+([a-zA-Z])\s+([a-zA-Z])/; // Spaces between single chars
-  
-  return corruptionPattern.test(text) || spacePattern.test(text);
+  return text
+    .replace(/undefined/gi, "")
+    .replace(/([a-zA-Z])\1+/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
 }

@@ -7,8 +7,7 @@ const router = Router();
 
 
 
-
-
 router.post("/login", senateLogin);
+
 
 export default router;

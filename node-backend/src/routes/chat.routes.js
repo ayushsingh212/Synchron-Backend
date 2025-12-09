@@ -1,5 +1,6 @@
 import {Router} from "express"
 import { chatBot } from "../controllers/chatbot.controller.js";
+import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 
 
@@ -9,6 +10,6 @@ import { chatBot } from "../controllers/chatbot.controller.js";
 
 
 const router = Router()
-router.post("/chat",chatBot)
+router.post("/chat",verifyJWT,chatBot)
 
 export default router;

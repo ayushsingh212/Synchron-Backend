@@ -1,21 +1,37 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose from "mongoose"
 
-const timetableRequestSchema = new Schema(
+const timetableRequestSchema = new mongoose.Schema(
   {
     seneteId: {
-      type: Schema.Types.ObjectId,
-      ref: "Faculty",
+      type: String,
+      required: true,
+    },
+    year: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      required: true,
+    },
+    course: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      required: true,
+    },
+    semester: {
+      type: String,
+      lowercase: true,
+      trim: true,
       required: true,
     },
     organisationId: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Organisation",
       required: true,
     },
     message: {
       type: String,
-
-      default:"Timetable for approval" 
+      default: "Timetable for approval",
     },
     status: {
       type: String,
@@ -23,11 +39,17 @@ const timetableRequestSchema = new Schema(
       default: "pending",
     },
     reviewedBy: {
-      type: Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId,
       ref: "Organisation",
+      default: null,
     },
   },
   { timestamps: true }
 );
- 
+
+timetableRequestSchema.index(
+  { seneteId: 1, organisationId: 1, year: 1, course: 1, semester: 1 },
+  { unique: true }
+);
+
 export const TimetableRequest = mongoose.model("TimetableRequest", timetableRequestSchema);

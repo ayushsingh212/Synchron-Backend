@@ -227,6 +227,8 @@ export const extractAllDocumentsText = asyncHandler(async (req, res) => {
 
   await ctx.save();
 
+  console.log(ctx.uploadedDocuments)
+
   return res.json(new ApiResponse(200, ctx.uploadedDocuments));
 });
 

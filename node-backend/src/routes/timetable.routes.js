@@ -1,13 +1,17 @@
 import { Router } from "express";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
-import { approveGeneratedSolution, checkGenerationStatus, generateByGivingData, getDetailedTimeTable, getFacultyTimeTables       , getFacultyTimetablesByGroup, getFacultyTimeTablesForSpecific, getGeneratedSolutionById, getGeneratedSolutions, getGeneratedSolutionsAll, getInfoPdf, getSectionTimetablesByGroup, getSectionTimeTablesDb, getSectionTimeTablesForSpecific, getSingleFacultyTimeTable, getSingleSectionTimeTable, startTimeTableCreation, updateFacultyTimetable } from "../controllers/timetable.controllers.js";
+import { approveGeneratedSolution, checkGenerationStatus, generateByGivingData, getAFacultyTimetableID, getDetailedTimeTable, getFacultyTimeTables       , getFacultyTimetablesByGroup, getFacultyTimeTablesForSpecific, getGeneratedSolutionById, getGeneratedSolutions, getGeneratedSolutionsAll, getInfoPdf, getSectionTimetablesByGroup, getSectionTimeTablesDb, getSectionTimeTablesForSpecific, getSingleFacultyTimeTable, getSingleSectionTimeTable, startTimeTableCreation, updateFacultyTimetable } from "../controllers/timetable.controllers.js";
 import {   generateAndDownloadAllFacultyTimetables } from "../controllers/facultyTimetable.controllers.js";
 import {   updateSectionTimetable } from "../controllers/sectionTimetable.controllers.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { saveTimetable } from "../controllers/organisationData.controllers.js";
 import { verifyAdminToken } from "../middlewares/admin.middleware.js";
+import { verifySenateToken } from "../middlewares/senate.middleware.js";
 
 const router = Router();
+
+
+router.get("/facultyTime",getFacultyTimeTablesForSpecific)
 
 router.use(verifyJWT)         
 
@@ -23,7 +27,7 @@ router.post("/upload-pdf",upload.single("file"),getInfoPdf);
 
  
 router.get("/faculty/downloadAll",generateAndDownloadAllFacultyTimetables);   // in use
-router.get("/faculty/:faculty_id",getSingleFacultyTimeTable);
+router.get("/faculty/:faculty_id",getAFacultyTimetableID);
 router.get("/detailed",getDetailedTimeTable);
 
 
@@ -53,9 +57,9 @@ router.get("/facultyTimeTable/getSpecific",getFacultyTimeTablesForSpecific);
 router.get("/sectionTimeTable/getSpecific",getSectionTimeTablesForSpecific);
 
 
-router.get("/solutions",getGeneratedSolutions);
-router.get("/solutions/:id",getGeneratedSolutionById);
-router.post("/solutions/approve",approveGeneratedSolution)
+router.get("/solutions",verifySenateToken,getGeneratedSolutions);
+router.get("/solutions/:id",verifySenateToken,getGeneratedSolutionById);
+router.post("/solutions/approve",verifySenateToken,approveGeneratedSolution)
 
 
 
