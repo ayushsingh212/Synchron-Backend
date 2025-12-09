@@ -11,7 +11,7 @@ import dotenv from "dotenv"
 const contextCache = new Map();  
 const rateLimit = new Map();     
 
-const CEREBRAS_API_KEY=`csk-9m4jhn59dmk22fdpmdxxk96d2e4dd3ewwjevf5erry5dj89e`
+const CEREBRAS_API_KEY=`csk-twyj2wxdckc8yt5w3mw9296f83fmtfc593xtwnndc2xnrdry`
 // Cache Time = 15 minutes
 const CACHE_TTL = 15 * 60 * 1000;
 // Min time between chatbot requests = 2 seconds
