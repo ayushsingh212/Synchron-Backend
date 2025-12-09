@@ -41,3 +41,4 @@ export const senateLogin = asyncHandler(async (req, res) => {
       }, "Senate login successful")
     );
 });
+
