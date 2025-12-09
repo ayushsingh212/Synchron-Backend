@@ -21,9 +21,7 @@ router.get("/sections",getSectionTimeTablesDb)
 router.get("/sections/:section_id",getSingleSectionTimeTable);
 router.get("/faculty",getFacultyTimeTables);  
 router.post("/upload-pdf",upload.single("file"),getInfoPdf);
-// router.get("/faculty/:facultyId/download", downloadFacultyTimetable);
-// Section TimeTable 
-// router.get("/sections/downloadAll",downloadAllSectionTimetables)
+
 
  
 router.get("/faculty/downloadAll",generateAndDownloadAllFacultyTimetables);   // in use
@@ -33,18 +31,11 @@ router.get("/detailed",getDetailedTimeTable);
 
 
 
-//Routes related to the update of the timetable
 
 
 
 router.put("/sectionUpdate",updateSectionTimetable);
-router.put("/facultyUpdate",updateFacultyTimetable);
-
-
-//Saving the manual input for the timetable
-
-
-
+router.put("/facultyUpdate",updateFacultyTimetable);  
 router.post("/saveData",saveTimetable)   // i th use
 
 

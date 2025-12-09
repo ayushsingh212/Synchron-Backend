@@ -9,12 +9,8 @@ import { redisClient } from "../middlewares/otp.middleware.js";
 import { verifyOtp } from "./verification.controller.js";
 import { options } from "../middlewares/auth.middleware.js";
 import { uploadOnCloudinary, deleteFromCloudinary } from "../utils/cloudinary.js";
-import { Faculty } from "../models/faculty.model.js";
-import { Department } from "../models/department.model.js";
-import { Course } from "../models/course.model.js";
-import { Timetable } from "../models/timetable.model.js";
+
 import { TimetableRequest } from "../models/timetableRequest.model.js";
-import { sendEmail } from "../utils/sendMail.js";
 import { z } from "zod";
 
 
@@ -82,32 +78,7 @@ export const generateAccessAndRefreshToken = async (organisationId) => {
 };
 
 
- const getOrganisationFullDetails = asyncHandler(async (req, res) => {
-  validateOrThrow(idParamSchema, req.params);
-  const { id } = req.params;
 
-  const organisation = await Organisation.findById(id).select("-password");
-  if (!organisation) throw new ApiError(404, "Organisation not found");
-
-  const [faculties, departments, courses, timetables, requests] = await Promise.all([
-    Faculty.find({ organisationId: id })
-      .populate("departmentId", "departmentName")
-      .populate("subjectsTaught", "subjectName")
-      .populate("coursesIn", "courseName"),
-    Department.find({ organisationId: id }),
-    Course.find({ organisationId: id }),
-    Timetable.find({ organisationId: id })
-      .populate("facultyId", "facultyName email")
-      .populate("courseId", "courseName")
-      .populate("subjectId", "subjectName")
-      .populate("departmentId", "departmentName"),
-    TimetableRequest.find({ organisationId: id }).populate("facultyId", "facultyName email"),
-  ]);
-
-  return res.status(200).json(
-    new ApiResponse(200, { organisation, faculties, departments, courses, timetables, timetableRequests: requests }, "Organisation full details fetched")
-  );
-});
 
 
 const registerOrganisation = asyncHandler(async (req, res) => {
@@ -232,6 +203,8 @@ const logoutOrganisation = asyncHandler(async (req, res) => {
     .status(202)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
+    .clearCookie("adminToken",options)
+    .clearCookie("senateToken",options)
     .json(new ApiResponse(200, {}, "Organisation logged out successfully"));
 });
 
@@ -397,5 +370,5 @@ export {
   deleteOrganisation,
   verifyOrganisationEmail,
   getAllOrganisation,
-  getOrganisationFullDetails,
+
 };

@@ -2,7 +2,6 @@ import { z } from "zod";
 import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import { OrganisationData } from "../models/organisationData.model.js";
 import { SectionTimetable } from "../models/sectionTimetable.model.js";
-import { Timetable } from "../models/timetable.model.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import ApiResponse from "../utils/apiResponse.js";
 import ApiError from "../utils/apiError.js";

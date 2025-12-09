@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { changePassword, deleteOrganisation, getAllOrganisation, getCurrentOrganisation, getOrganisationFullDetails, loginOrganisation, logoutOrganisation, refreshAccessToken, registerOrganisation, updateAvatar, updateProfile, verifyOrganisationEmail } from "../controllers/organisation.controllers.js";
+import { changePassword, deleteOrganisation, getAllOrganisation, getCurrentOrganisation, loginOrganisation, logoutOrganisation, refreshAccessToken, registerOrganisation, updateAvatar, updateProfile, verifyOrganisationEmail } from "../controllers/organisation.controllers.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
 import { upload } from "../middlewares/multer.middleware.js";
 import { getPreviousSavedData, resetOrganisationData } from "../controllers/organisationData.controllers.js";
