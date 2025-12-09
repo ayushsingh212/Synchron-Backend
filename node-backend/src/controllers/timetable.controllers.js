@@ -1172,39 +1172,22 @@ export const getFacultyTimeTablesForSpecific = asyncHandler(
     const { course, year, semester } = req.query;
 
     console.log("here are the coming things", course, year, semester);
-    let organisationEmail
-    if (!organisationId) {
 
-
-       organisationEmail = req.query.organisationEmail
-      if(!organisationEmail)
-      {
-      throw new ApiError(401, "Login first");
-
-      }
-    }
 
     if (!course || !year || !semester) {
       throw new ApiError(400, "Course, year, and semester are required");
     }
-    let docs;
-if(organisationId)
-{
-   docs = await FacultyTimetable.find({
+ 
+
+    const  docs = await FacultyTimetable.find({
       organisationId,
       course: course.toLowerCase().trim(),
       year: year.toLowerCase().trim(),
       semester: semester.toLowerCase().trim(),
     }).lean();
-}
-else{
-  docs = await FacultyTimetable.find({
-      organisationEmail,
-      course: course.toLowerCase().trim(),
-      year: year.toLowerCase().trim(),
-      semester: semester.toLowerCase().trim(),
-    }).lean();
-}
+
+
+
      
 
     console.log("Here is the docs", docs);
@@ -1452,7 +1435,7 @@ export const getGeneratedSolutionById = asyncHandler(async (req, res) => {
 export const approveGeneratedSolution = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
   const { solutionId } = req.body;
-
+    const senateId = req.organisation._id
   if (!organisationId) throw new ApiError(401, "Login first");
   if (!solutionId) throw new ApiError(400, "solutionId is required");
 
