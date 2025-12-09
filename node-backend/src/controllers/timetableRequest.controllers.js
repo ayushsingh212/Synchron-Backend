@@ -2,12 +2,16 @@ import { TimetableRequest } from "../models/timetableRequest.model.js";
 import ApiError from "../utils/apiError.js";
 import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
+import { nanoid } from "nanoid";
 
 export const createTimetableRequest = asyncHandler(async (req, res) => {
-  const seneteId = req.senate?.senateId || req.organisation._id;
+  const seneteId = req.senate?.senateId || nanoid()
   const organisationId = req.organisation?._id;
   const { year, course, semester, message } = req.body;
-
+  if(!year || !course || !semester)
+  {
+    throw new ApiError(400,"Provide necessary feeilds")
+  }
   if (!seneteId || !organisationId)
     throw new ApiError(401, "Senate login required");
 

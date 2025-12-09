@@ -12,7 +12,7 @@ const router = Router();
 
 
 router.get("/facultyTime",getFacultyTimeTablesForSpecific)
-
+router.get("/sectionTime",getSectionTimeTablesForSpecific)
 router.use(verifyJWT)         
 
 router.post("/generate",startTimeTableCreation);

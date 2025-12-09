@@ -15,6 +15,7 @@ import contextRoutes from "./context.routes.js"
 import senateRoutes from "./senate.routes.js";
 import authorityRoutes from "./authority.routes.js"
 import requestTimeTableRoutes from "./timetableRequest.routes.js"
+import masterTimeTables from "./masterTimetable.routes.js"
 import { Router } from "express";
 
 const router = Router();
@@ -36,4 +37,5 @@ router.use("/context",contextRoutes)
 router.use("/senate", senateRoutes);
 router.use("/senates",authorityRoutes);
 router.use("/request",requestTimeTableRoutes)
+router.use("/super",masterTimeTables)
 export default router;
