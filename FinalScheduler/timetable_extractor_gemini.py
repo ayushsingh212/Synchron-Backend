@@ -238,7 +238,7 @@ class TimetableExtractor:
     3. Detect elective subjects and set `"is_elective": true` for them.
     4. Each section with electives MUST include `"electives": ["SUB1","SUB2"]`.
     5. If fixed elective periods exist, place them under `"elective_slots"`.
-    6. DO NOT skip labs — include in both `"subjects"` and `"labs"`.
+    6. DO NOT skip labs — include in both `"subjects"` and `"labs"`. for eg. is CSLAB01 is in labs it must be in subjects too.
     7. Extract and map faculty to subjects.
     8. Output ONLY valid JSON.
     9. "requires_consecutive_periods" in labs is by default 2 if not mentioned, it is the number of consecutive lab periods for a particular lab.
@@ -533,6 +533,3 @@ class TimetableExtractor:
         }
 
         return structured_data
-
-
-# End of class
