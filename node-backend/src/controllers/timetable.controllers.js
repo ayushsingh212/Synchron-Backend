@@ -1544,13 +1544,13 @@ export const approveGeneratedSolution = asyncHandler(async (req, res) => {
     { $set: { isApproved: true } }
   );
   
-    await TimetableRequest.findOneAndUpdate({seneteId,course,year,semester},{
-      $set:{
-        status:"approved"
-      }
-    },{
-      new:true
-    })
+    // await TimetableRequest.findOneAndUpdate({seneteId,course,year,semester},{
+    //   $set:{
+    //     status:"approved"
+    //   }
+    // },{
+    //   new:true
+    // })
 
   return res.status(200).json(
     new ApiResponse(
