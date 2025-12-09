@@ -4,7 +4,7 @@ import ApiResponse from "../utils/apiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 
 export const createTimetableRequest = asyncHandler(async (req, res) => {
-  const seneteId = req.senate?.senateId;
+  const seneteId = req.senate?.senateId || req.organisation._id;
   const organisationId = req.organisation?._id;
   const { year, course, semester, message } = req.body;
 
