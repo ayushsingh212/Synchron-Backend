@@ -114,7 +114,10 @@ class TimetableExtractor:
         {{"id": 7, "start_time": "14:15", "end_time": "15:05"}},
         {{"id": 8, "start_time": "15:05", "end_time": "15:55"}}
         ],
-        "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+        "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+        "break_periods":[3,6],
+        "lunch_period":6
+
     }},
 
     "elective_slots": [
@@ -234,7 +237,7 @@ class TimetableExtractor:
     ## EXTRACTION RULES:
 
     1. Extract time periods EXACTLY as they appear in the document.
-    2. DO NOT add break/lunch/mentorship unless explicitly shown.
+    2. DO NOT add mentorship unless explicitly shown.
     3. Detect elective subjects and set `"is_elective": true` for them.
     4. Each section with electives MUST include `"electives": ["SUB1","SUB2"]`.
     5. If fixed elective periods exist, place them under `"elective_slots"`.
@@ -242,6 +245,8 @@ class TimetableExtractor:
     7. Extract and map faculty to subjects.
     8. Output ONLY valid JSON.
     9. "requires_consecutive_periods" in labs is by default 2 if not mentioned, it is the number of consecutive lab periods for a particular lab.
+    10. IF BREAK AND LUNCH ARE NOT MENTIONED, SEPERATE THEM EQUALLY, FOR EG. IF 9 PERIODS THEN "break_periods":[3,6],
+    "lunch_period":6, second index of "break_periods" will be same as "lunch_period" 6==6 in this case.
 
     ## CRITICAL ELECTIVE RULES:
 

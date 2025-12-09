@@ -546,6 +546,62 @@ class TimetableChromosome:
             s.day == slot.day and s.period == slot.period
             for s in self.data.elective_slots
         )
+    
+    def _calculate_compactness_reward(self) -> float:
+        """
+        Rewards chromosomes that schedule classes more compactly, minimizing free periods
+        between the first and last class of the day for each section.
+        """
+        reward_per_compact_slot = 0.5  # A small reward value
+        total_compactness_reward = 0.0
+        
+        # Build section schedule map (occupied slots marked as True)
+        section_schedule: Dict[str, Dict[int, List[int]]] = defaultdict(lambda: defaultdict(list))
+        for entry in self.timetable:
+            section_schedule[entry.section_id][entry.time_slot.day].append(entry.time_slot.period)
+            
+        for section_id in self.data.sections.keys():
+            for day in range(self.data.num_working_days):
+                periods_on_day = section_schedule[section_id][day]
+                
+                if not periods_on_day:
+                    continue # Day is completely free, no compactness to calculate
+                    
+                first_class_period = min(periods_on_day)
+                last_class_period = max(periods_on_day)
+                
+                # Check all periods between the first and last class (inclusive)
+                occupied_periods = set(periods_on_day)
+                
+                # Exclude explicitly defined break periods from the free count
+                # Assuming data.break_periods contains the period IDs of breaks
+                break_periods_set = set(self.data.break_periods)
+                
+                # Count periods that are free (not a class AND not a break)
+                free_slots_in_between = 0
+                for p in range(first_class_period, last_class_period + 1):
+                    if p not in occupied_periods and p not in break_periods_set:
+                        free_slots_in_between += 1
+                
+                # Reward for *NOT* having a free slot is better.
+                # Total slots = (last - first + 1) - count of breaks
+                # Total scheduled slots = len(occupied_periods)
+                # Max reward for the day = (last - first + 1 - len(break_periods_set)) * reward_per_compact_slot
+                # Total scheduled slots in between = len(occupied_periods)
+                
+                # The total span of the schedule *minus* the actual classes scheduled is the empty time.
+                total_periods_in_span = (last_class_period - first_class_period + 1)
+                total_classes_in_span = len(occupied_periods)
+                
+                # Calculate the "compactness score" for the day (lower is better, 0 is perfectly compact)
+                compactness_score_for_day = total_periods_in_span - total_classes_in_span - len(break_periods_set.intersection(range(first_class_period, last_class_period + 1)))
+
+                # Reward for *achieving* compactness (i.e., less idle time)
+                total_compactness_reward += (total_periods_in_span - free_slots_in_between) * reward_per_compact_slot
+                
+        # Scale the reward (e.g., to be comparable to other rewards)
+        # Assuming around 5 days * 5 sections * 8 periods/day = 200 slots. Max reward ~ 100.0
+        return total_compactness_reward
 
 
     def _get_appropriate_room(self, section_id: str, class_info: Dict) -> Optional[str]:
@@ -640,6 +696,52 @@ class TimetableChromosome:
 
         return eligible
 
+
+    def _check_consecutive_free_periods(self) -> float:
+        """
+        Calculates the penalty for having more than ONE consecutive free periods
+        for any section on any working day.
+        
+        Returns the total count of 'bad' free slots (i.e., the 3rd, 4th, 5th, etc., consecutive free period).
+        """
+        bad_free_period_count = 0
+        
+        # Build the schedule map: section_id -> day -> period -> is_free (bool)
+        section_schedule: Dict[str, Dict[int, Dict[int, bool]]] = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: True)))
+
+        # Mark all periods that are occupied or are scheduled break periods
+        for entry in self.timetable:
+            day = entry.time_slot.day
+            period = entry.time_slot.period
+            section_schedule[entry.section_id][day][period] = False
+            
+        # Also mark explicit break periods as *not* free periods for this check
+        for day in range(self.data.num_working_days):
+            for period in self.data.break_periods:
+                for section_id in self.data.sections.keys():
+                     section_schedule[section_id][day][period] = False
+
+
+        # Iterate through each section and each day
+        for section_id in self.data.sections.keys():
+            for day in range(self.data.num_working_days):
+                consecutive_free_count = 0
+                
+                # Iterate through periods in order
+                for period in self.data.period_ids:
+                    
+                    is_free = section_schedule[section_id][day][period]
+                    
+                    if is_free:
+                        consecutive_free_count += 1
+                    else:
+                        consecutive_free_count = 0 # Reset count when a class/break is found
+                    
+                    # If count exceeds 1, every period beyond the second is a violation
+                    if consecutive_free_count > 1:
+                        bad_free_period_count += 1
+                        
+        return bad_free_period_count
 
     def _get_consecutive_slots(self, day: int) -> List[Tuple[TimeSlot, TimeSlot]]:
         """Find consecutive slot sequences for a given day.
@@ -992,6 +1094,12 @@ class TimetableChromosome:
         else:
             self.constraint_violations.pop('elective_slot_violation', None)
 
+        consecutive_free_violation_count = self._check_consecutive_free_periods()
+        if consecutive_free_violation_count > 0:
+            self.constraint_violations['long_free_period'] = consecutive_free_violation_count
+        else:
+            self.constraint_violations.pop('long_free_period', None)
+
         # ----------------------------------------------------
         # COVERAGE REWARD
         # ----------------------------------------------------
@@ -999,7 +1107,10 @@ class TimetableChromosome:
         scheduled = len([e for e in self.timetable if not e.is_lab_second_period])
         coverage_ratio = scheduled / max(1, total_required)
 
-        reward = coverage_ratio * 800.0
+        reward = coverage_ratio * 100000.0
+
+        compactness_reward = self._calculate_compactness_reward()
+        reward += compactness_reward
 
         # ----------------------------------------------------
         # ELECTIVE COVERAGE REWARD
@@ -1033,6 +1144,8 @@ class TimetableChromosome:
 
         # Elective slot violation penalty
         penalty += elective_slot_violation * 2000.0
+
+        penalty += consecutive_free_violation_count * 500.0
 
         # Lab continuity penalty
         penalty += self.constraint_violations.get("lab_continuity", 0) * 1500.0
