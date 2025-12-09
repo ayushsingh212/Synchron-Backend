@@ -431,6 +431,11 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       break_periods: organisationData.time_slots?.break_periods || [],
       lunch_period: organisationData.time_slots?.lunch_period || null,
     },
+    // ADDED: elective_slots field
+    elective_slots: (organisationData.elective_slots || []).map((slot) => ({
+      day_name: slot.day_name,
+      period: slot.period,
+    })),
     departments: (organisationData.departments || []).map((dept) => ({
       dept_id: dept.dept_id,
       name: dept.name,
@@ -449,6 +454,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
         student_count: section.student_count,
         coordinator: section.coordinator,
         specialization: section.specialization || "",
+        // ADDED: electives field for sections
+        electives: section.electives || [],
       })),
     })),
     subjects: (organisationData.subjects || []).map((subject) => ({
@@ -459,11 +466,13 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       lectures_per_week: subject.lectures_per_week,
       semester: subject.semester,
       departments: subject.departments || [],
+      specialization: subject.specialization || "",
       min_classes_per_week: subject.min_classes_per_week,
       max_classes_per_day: subject.max_classes_per_day,
       tutorial_sessions: subject.tutorial_sessions || 0,
-      specialization: subject.specialization || "",
-      flexible_timing: subject.flexible_timing || false,
+      // ADDED: is_elective field
+      is_elective: subject.is_elective || false,
+      // REMOVED: flexible_timing as it's not in the model spec
     })),
     labs: (organisationData.labs || []).map((lab) => ({
       lab_id: lab.lab_id,
@@ -476,6 +485,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       departments: lab.departments || [],
       lab_rooms: lab.lab_rooms || [],
       specialization: lab.specialization || "",
+      // ADDED: requires_consecutive_periods field
+      requires_consecutive_periods: lab.requires_consecutive_periods || 2,
     })),
     faculty: (organisationData.faculty || []).map((faculty) => ({
       faculty_id: faculty.faculty_id,
@@ -486,6 +497,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       max_hours_per_week: faculty.max_hours_per_week,
       avg_leaves_per_month: faculty.avg_leaves_per_month,
       preferred_time_slots: faculty.preferred_time_slots || [],
+      // ADDED: faculty_experience field
+      faculty_experience: faculty.faculty_experience || 0,
     })),
     rooms: (organisationData.rooms || []).map((room) => ({
       room_id: room.room_id,
@@ -495,6 +508,8 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
       department: room.department || "",
       equipment: room.equipment || [],
     })),
+    // ADDED: subject_name_mapping field
+    subject_name_mapping: organisationData.subject_name_mapping || {},
     constraints: {
       hard_constraints: {
         no_faculty_clash:
@@ -505,30 +520,23 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
         no_section_clash:
           organisationData.constraints?.hard_constraints?.no_section_clash ??
           true,
-        break_periods_fixed:
-          organisationData.constraints?.hard_constraints?.break_periods_fixed ||
-          [],
-        lunch_period_fixed:
-          organisationData.constraints?.hard_constraints?.lunch_period_fixed ||
-          null,
-        mentorship_period_fixed:
+        // ADDED: max_classes_per_subject_per_day field
+        max_classes_per_subject_per_day:
           organisationData.constraints?.hard_constraints
-            ?.mentorship_period_fixed || null,
+            ?.max_classes_per_subject_per_day || 2,
         max_classes_per_day_per_section:
           organisationData.constraints?.hard_constraints
             ?.max_classes_per_day_per_section || 7,
-        min_classes_per_week_per_subject:
-          organisationData.constraints?.hard_constraints
-            ?.min_classes_per_week_per_subject ?? true,
         lab_duration_consecutive:
           organisationData.constraints?.hard_constraints
             ?.lab_duration_consecutive ?? true,
-        faculty_availability:
-          organisationData.constraints?.hard_constraints
-            ?.faculty_availability ?? true,
-        section_room_assignment:
-          organisationData.constraints?.hard_constraints
-            ?.section_room_assignment ?? true,
+        // REMOVED: fields not in model spec:
+        // - break_periods_fixed
+        // - lunch_period_fixed
+        // - mentorship_period_fixed
+        // - min_classes_per_week_per_subject
+        // - faculty_availability
+        // - section_room_assignment
       },
       soft_constraints: {
         balanced_daily_load: {
@@ -549,158 +557,27 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
             organisationData.constraints?.soft_constraints
               ?.minimize_faculty_travel?.weight || 0.15,
         },
-        morning_heavy_subjects: {
-          weight:
-            organisationData.constraints?.soft_constraints
-              ?.morning_heavy_subjects?.weight || 0.1,
-          subjects:
-            organisationData.constraints?.soft_constraints
-              ?.morning_heavy_subjects?.subjects || [],
-        },
-        avoid_single_period_gaps: {
-          weight:
-            organisationData.constraints?.soft_constraints
-              ?.avoid_single_period_gaps?.weight || 0.15,
-        },
-        distribute_subjects_evenly: {
-          weight:
-            organisationData.constraints?.soft_constraints
-              ?.distribute_subjects_evenly?.weight || 0.1,
-        },
-        minimize_free_periods: {
-          weight:
-            organisationData.constraints?.soft_constraints
-              ?.minimize_free_periods?.weight || 0.25,
-        },
+        // REMOVED: fields not in model spec:
+        // - morning_heavy_subjects
+        // - avoid_single_period_gaps
+        // - distribute_subjects_evenly
+        // - minimize_free_periods
       },
     },
-    special_requirements: {
-      mentorship_break: {
-        period:
-          organisationData.special_requirements?.mentorship_break?.period ||
-          null,
-        duration:
-          organisationData.special_requirements?.mentorship_break?.duration ||
-          1,
-        all_sections:
-          organisationData.special_requirements?.mentorship_break
-            ?.all_sections || true,
-      },
-      library_periods: {
-        sections:
-          organisationData.special_requirements?.library_periods?.sections ||
-          [],
-        periods_per_week:
-          organisationData.special_requirements?.library_periods
-            ?.periods_per_week || 1,
-        flexible:
-          organisationData.special_requirements?.library_periods?.flexible ??
-          true,
-      },
-      project_work: {
-        sections:
-          organisationData.special_requirements?.project_work?.sections || [],
-        periods_per_week:
-          organisationData.special_requirements?.project_work
-            ?.periods_per_week || 8,
-        flexible_scheduling:
-          organisationData.special_requirements?.project_work
-            ?.flexible_scheduling ?? true,
-      },
-      tutorial_classes: {
-        subjects:
-          organisationData.special_requirements?.tutorial_classes?.subjects ||
-          [],
-        marked_as:
-          organisationData.special_requirements?.tutorial_classes?.marked_as ||
-          "T",
-        duration:
-          organisationData.special_requirements?.tutorial_classes?.duration ||
-          1,
-      },
-      open_electives: {
-        cross_department:
-          organisationData.special_requirements?.open_electives
-            ?.cross_department ?? true,
-        faculty_rotation:
-          organisationData.special_requirements?.open_electives
-            ?.faculty_rotation ?? true,
-      },
-      minors_honors: {
-        delivery_mode:
-          organisationData.special_requirements?.minors_honors?.delivery_mode ||
-          "online",
-        platform:
-          organisationData.special_requirements?.minors_honors?.platform ||
-          "Google Meet",
-        sections:
-          organisationData.special_requirements?.minors_honors?.sections || [],
-        periods:
-          organisationData.special_requirements?.minors_honors?.periods || [],
-      },
-      lab_batch_division: {
-        max_students_per_batch:
-          organisationData.special_requirements?.lab_batch_division
-            ?.max_students_per_batch || 15,
-        batch_naming: organisationData.special_requirements?.lab_batch_division
-          ?.batch_naming || ["A", "B", "C", "D"],
-        rotation_labs:
-          organisationData.special_requirements?.lab_batch_division
-            ?.rotation_labs || [],
-      },
-    },
+    // REMOVED: special_requirements as it's not in the model spec
     genetic_algorithm_params: {
       population_size:
         organisationData.genetic_algorithm_params?.population_size || 50,
       generations:
-        organisationData.genetic_algorithm_params?.generations || 200,
+        organisationData.genetic_algorithm_params?.generations || 50, // Changed from 200 to 50
       mutation_rate:
         organisationData.genetic_algorithm_params?.mutation_rate || 0.2,
       crossover_rate:
         organisationData.genetic_algorithm_params?.crossover_rate || 0.8,
       elite_size: organisationData.genetic_algorithm_params?.elite_size || 5,
-      tournament_size:
-        organisationData.genetic_algorithm_params?.tournament_size || 3,
       early_stopping_patience:
-        organisationData.genetic_algorithm_params?.early_stopping_patience || 5,
-      fitness_weights: {
-        coverage_weight:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.coverage_weight || 1000.0,
-        balanced_daily_load_weight:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.balanced_daily_load_weight || 50.0,
-        faculty_pref_weight:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.faculty_pref_weight || 10.0,
-        consecutive_periods_weight:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.consecutive_periods_weight || 30.0,
-        faculty_clash_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.faculty_clash_penalty || 2000.0,
-        room_clash_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.room_clash_penalty || 2000.0,
-        section_clash_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.section_clash_penalty || 2000.0,
-        min_classes_violation_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.min_classes_violation_penalty || 500.0,
-        gap_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.gap_penalty || 100.0,
-        free_period_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.free_period_penalty || 25.0,
-        room_assignment_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.room_assignment_penalty || 1000.0,
-        placement_failed_penalty:
-          organisationData.genetic_algorithm_params?.fitness_weights
-            ?.placement_failed_penalty || 300.0,
-      },
+        organisationData.genetic_algorithm_params?.early_stopping_patience || 10,
+      // REMOVED: tournament_size and fitness_weights as not in model spec
     },
   };
 
@@ -779,6 +656,46 @@ export const checkGenerationStatus = asyncHandler(async (req, res) => {
 
   return res.json(new ApiResponse(200, response.data, "Status fetched"));
 });
+export const getSectionTimeTablesDbSpec = asyncHandler(async (req, res) => {
+  try {
+    const organisationId = req.organisation?._id || req.query._id;
+
+    if (!organisationId) {
+      throw new ApiError(401, "Login first");
+    }
+
+    const docs = await SectionTimetable.find({ organisationId })
+      .select("-organisationId")
+      .lean();
+
+    if (!docs || docs.length === 0) {
+      throw new ApiError(400, "No timetable found for sections");
+    }
+
+    const grouped = {};
+
+    docs.forEach((doc) => {
+      const { _id, __v, createdAt, updatedAt, ...clean } = doc;
+
+      const { course, year, semester, section_id } = clean;
+
+      if (!grouped[course]) grouped[course] = {};
+      if (!grouped[course][year]) grouped[course][year] = {};
+      if (!grouped[course][year][semester])
+        grouped[course][year][semester] = {};
+
+      grouped[course][year][semester][section_id] = clean;
+    });
+
+    return res.json(
+      new ApiResponse(200, grouped, "Section timetables fetched successfully")
+    );
+  } catch (error) {
+    console.error("Unexpected error in getSectionTimeTables:", error);
+
+    return res.status(500).json(new ApiError(500, "Internal server error"));
+  }
+});
 
 export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
   try {
@@ -820,19 +737,52 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
     return res.status(500).json(new ApiError(500, "Internal server error"));
   }
 });
-
 export const getSingleSectionTimeTable = asyncHandler(async (req, res) => {
-  const { section_id } = req.params;
-  const response = await axios.get(
-    `${FLASK_URL}/api/timetables/sections/${section_id}`
-  );
-  if (!response || !response.data)
-    throw new ApiError(404, "Section timetable not found");
+  try {
+    const organisationId = req.organisation?._id;
+    const { section_id } = req.query;
 
-  return res.json(
-    new ApiResponse(200, response, `Section ${section_id} timetable fetched`)
-  );
+    if (!organisationId) {
+      throw new ApiError(401, "Login first");
+    }
+
+    if (!section_id) {
+      throw new ApiError(400, "section_id is required");
+    }
+
+    const doc = await SectionTimetable.findOne({
+      organisationId,
+      section_id
+    })
+      .select("-organisationId -__v -createdAt -updatedAt")
+      .lean();
+
+    if (!doc) {
+      throw new ApiError(404, "Timetable not found for this section");
+    }
+
+    return res.json(
+      new ApiResponse(200, doc, "Section timetable fetched successfully")
+    );
+  } catch (error) {
+    console.error("Error in getSingleSectionTimetable:", error);
+    return res.status(500).json(new ApiError(500, "Internal server error"));
+  }
 });
+
+
+// export const getSingleSectionTimeTable = asyncHandler(async (req, res) => {
+//   const { section_id } = req.params;
+//   const response = await axios.get(
+//     `${FLASK_URL}/api/timetables/sections/${section_id}`
+//   );
+//   if (!response || !response.data)
+//     throw new ApiError(404, "Section timetable not found");
+
+//   return res.json(
+//     new ApiResponse(200, response, `Section ${section_id} timetable fetched`)
+//   );
+// });
 
 export const getFacultyTimeTables = asyncHandler(async (req, res) => {
   const organisationId = req.organisation?._id;
@@ -1227,7 +1177,7 @@ export const getFacultyTimeTablesForSpecific = asyncHandler(
 );
 export const getSectionTimeTablesForSpecific = asyncHandler(
   async (req, res) => {
-    const organisationId = req.organisation?._id;
+    const organisationId = req.organisation?._id || req.query.organisationId;
     const { course, year, semester } = req.query;
 
     console.log("Section params received:", course, year, semester);
@@ -1265,7 +1215,7 @@ export const getSectionTimeTablesForSpecific = asyncHandler(
         ...cleanDoc
       } = doc;
 
-      // store using section_id as key
+      
       result[doc.section_id] = cleanDoc;
     });
 
