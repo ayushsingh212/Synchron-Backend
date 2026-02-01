@@ -1,179 +1,141 @@
-import asyncHandler from "../utils/asyncHandler.js";
-import axios from "axios";
-import ragContext from "../models/ragContext.model.js";
-import ApiError from "../utils/apiError.js";
-import ApiResponse from "../utils/apiResponse.js";
-import dotenv from "dotenv"
+import asyncHandler from "../utils/asyncHandler.js"
+import axios from "axios"
+import ragContext from "../models/ragContext.model.js"
+import ApiError from "../utils/apiError.js"
+import ApiResponse from "../utils/apiResponse.js"
 
-// -------------------------------
-// IN-MEMORY CACHE
-// -------------------------------
-const contextCache = new Map();  
-const rateLimit = new Map();     
+const contextCache = new Map()
+const rateLimit = new Map()
 
-const CEREBRAS_API_KEY=`csk-twyj2wxdckc8yt5w3mw9296f83fmtfc593xtwnndc2xnrdry`
-// Cache Time = 15 minutes
-const CACHE_TTL = 15 * 60 * 1000;
-// Min time between chatbot requests = 2 seconds
-const MIN_INTERVAL = 2000;
+const CACHE_TTL = 15 * 60 * 1000
+const MIN_INTERVAL = 2000
+const MAX_CONTEXT_CHARS = 150000
 
+const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY
 
-// ---------------------------------
-// HELPER: GET OR BUILD CONTEXT
-// ---------------------------------
+if (!CEREBRAS_API_KEY) {
+  throw new Error("CEREBRAS_API_KEY missing in environment")
+}
+
 async function getContextForOrganisation(orgId) {
-  const now = Date.now();
+  const now = Date.now()
+  const cached = contextCache.get(orgId)
 
-  const cached = contextCache.get(orgId);
   if (cached && now - cached.timestamp < CACHE_TTL) {
-    return cached.data;
+    return cached.data
   }
 
-  const contexts = await ragContext.find({ organisationId: orgId }).lean();
+  const contexts = await ragContext
+    .find({ organisationId: orgId })
+    .select("uploadedDocuments.fileName uploadedDocuments.extractedText")
+    .lean()
 
-  let mergedText = "";
-  contexts.forEach(ctx => {
-    ctx.uploadedDocuments.forEach(doc => {
-      if (doc.extractedText) {
-        mergedText += `\n\n${doc.fileName}:\n${doc.extractedText}`;
+  let mergedText = ""
+
+  for (const ctx of contexts) {
+    for (const doc of ctx.uploadedDocuments || []) {
+      if (doc?.extractedText) {
+        mergedText += `\n\n${doc.fileName}:\n${doc.extractedText}`
       }
-    });
-  });
+    }
+  }
 
-  if (!mergedText.trim()) mergedText = "No institutional document context available.";
+  if (!mergedText.trim()) {
+    mergedText = "No institutional document context available."
+  }
 
-  // Cerebras supports large context — no need to slice aggressively  
-  if (mergedText.length > 150000) {
-    mergedText = mergedText.slice(-150000);  // keep last 150k chars
+  if (mergedText.length > MAX_CONTEXT_CHARS) {
+    mergedText = mergedText.slice(-MAX_CONTEXT_CHARS)
   }
 
   contextCache.set(orgId, {
     timestamp: now,
     data: mergedText
-  });
+  })
 
-  return mergedText;
+  return mergedText
 }
 
-
-// ---------------------------------
-// MAIN CHATBOT CONTROLLER (CEREBRAS)
-// ---------------------------------
 export const chatBot = asyncHandler(async (req, res) => {
-  const { message } = req.body;
+  const message = req.body?.message
 
-  if (!message?.trim()) {
-    return res.status(400).json({ success: false, reply: "Please provide a valid message." });
+  if (typeof message !== "string" || !message.trim()) {
+    throw new ApiError(400, "Invalid message")
   }
 
-  const orgId = req.organisation?._id;
+  const orgId = req.organisation?._id
   if (!orgId) {
-    return res.status(401).json({ success: false, reply: "Please login first." });
+    throw new ApiError(401, "Unauthorized")
   }
 
-
-  // ---------------------------
-  // RATE LIMITING (2 sec per org)
-  // ---------------------------
-  const lastCall = rateLimit.get(orgId) || 0;
-  const now = Date.now();
+  const now = Date.now()
+  const lastCall = rateLimit.get(orgId) || 0
 
   if (now - lastCall < MIN_INTERVAL) {
-    return res.status(429).json({
-      success: false,
-      reply: "Please wait a moment before sending another message."
-    });
+    throw new ApiError(429, "Too many requests. Please wait.")
   }
-  rateLimit.set(orgId, now);
 
+  rateLimit.set(orgId, now)
 
-  // ---------------------------
-  // GET RAG CONTEXT
-  // ---------------------------
-  const documentContext = await getContextForOrganisation(orgId);
+  const documentContext = await getContextForOrganisation(orgId)
 
-
-  // -------------------------------
-  // BUILD THE RAG PROMPT
-  // -------------------------------
   const prompt = `
 You are the official AI assistant for Synchron and AiCrona.
 
-You MUST answer the user's question STRICTLY using the following institutional documents.
-If answer is not in the context, say:
+Answer ONLY using the document context below.
+If the answer is not found, say:
 "I'm not able to find this information in your uploaded documents."
 
-================ DOCUMENT CONTEXT START ================
+DOCUMENT CONTEXT:
 ${documentContext}
-================ DOCUMENT CONTEXT END ==================
 
 USER QUESTION:
 ${message.trim()}
 
-Strict rules:
-- Do NOT hallucinate
-- Do NOT invent facts
-- Use clean English
-- No duplicate characters
-- Keep answer short and accurate
+RULES:
+- No hallucination
+- No assumptions
+- Short, factual answer only
 
-FINAL ANSWER:
-`;
+ANSWER:
+`.trim()
 
-  // -----------------------------------
-  // CALL CEREBRAS API
-  // -----------------------------------
-  try {
-    console.log("api",CEREBRAS_API_KEY)
-    const response = await axios.post(
-      "https://api.cerebras.ai/v1/chat/completions",
-      {
-        model: "gpt-oss-120b", 
-        messages: [
-          { role: "system", content: "You are a strict RAG assistant." },
-          { role: "user", content: prompt }
-        ],
-        temperature: 0.2,
-        max_tokens: 900
+  const response = await axios.post(
+    "https://api.cerebras.ai/v1/chat/completions",
+    {
+      model: "gpt-oss-120b",
+      messages: [
+        { role: "system", content: "You are a strict RAG assistant." },
+        { role: "user", content: prompt }
+      ],
+      temperature: 0.2,
+      max_tokens: 900
+    },
+    {
+      headers: {
+        Authorization: `Bearer ${CEREBRAS_API_KEY}`,
+        "Content-Type": "application/json"
       },
-      {
-        headers: {
-          "Authorization": `Bearer ${CEREBRAS_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        timeout: 20000
-      }
-    );
+      timeout: 20000
+    }
+  )
 
-    let reply = response.data?.choices?.[0]?.message?.content || "";
-    reply = aggressiveCleanResponse(reply);
+  let reply = response?.data?.choices?.[0]?.message?.content
+  reply = cleanResponse(reply)
 
-    return res.json({
-      success: true,
+  return res.json(
+    new ApiResponse(200, {
       reply,
       contextUsed: true
-    });
+    })
+  )
+})
 
-  } catch (err) {
-    console.error("Cerebras Error:", err?.response?.data || err?.message);
-
-    return res.status(500).json({
-      success: false,
-      reply: "I'm experiencing technical difficulties. Please try again shortly."
-    });
-  }
-});
-
-
-// -------------------------------------
-// CLEAN DUPLICATION BUG
-// -------------------------------------
-function aggressiveCleanResponse(text) {
-  if (!text) return "No valid response.";
+function cleanResponse(text) {
+  if (!text) return "No valid response."
 
   return text
     .replace(/undefined/gi, "")
-    .replace(/([a-zA-Z])\1+/g, "$1")
     .replace(/\s+/g, " ")
-    .trim();
+    .trim()
 }
