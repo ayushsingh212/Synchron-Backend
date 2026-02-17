@@ -27,7 +27,9 @@ const GeneratedSolutionSchema = new Schema(
     },
     rank: {
       type: Number,
+      lowercase:true,
       required: true,
+      trim:true,
     },
     fitness: {
       type: Number,
