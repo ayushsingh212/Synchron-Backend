@@ -22,6 +22,7 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          ENV_FILE: ${{ secrets.ENV_FILE }}
 
         run: |
 
@@ -38,7 +39,7 @@ jobs:
 
           echo "Connecting to EC2..."
 
-          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << 'EOF'
+          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << ENDSSH
 
             set -e
 
@@ -52,7 +53,7 @@ jobs:
 
             echo "Starting SSH Agent..."
 
-            eval $(ssh-agent -s)
+            eval \$(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
 
             echo "Adding GitHub to known hosts..."
@@ -88,6 +89,12 @@ jobs:
 
             fi
 
+            echo "Writing .env file..."
+
+            cat > .env << 'ENVEOF'
+          ${ENV_FILE}
+          ENVEOF
+
             echo "Stopping old containers..."
 
             docker compose down --remove-orphans || true
@@ -100,10 +107,18 @@ jobs:
 
             docker compose up -d --build
 
+            echo "Waiting for containers to start..."
+
+            sleep 10
+
             echo "Showing running containers..."
 
             docker ps
 
+            echo "Showing recent logs..."
+
+            docker compose logs --tail=20
+
             echo "Deployment completed successfully!"
 
-          EOF
+          ENDSSH
