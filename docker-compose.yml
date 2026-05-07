@@ -31,7 +31,6 @@ services:
     env_file:
       - .env
     depends_on:
-      - mongodb
       - redis
     networks:
       - final-network
