@@ -13,7 +13,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup SSH for EC2
+      - name: Setup SSH Agent
         uses: webfactory/ssh-agent@v0.7.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
@@ -22,13 +22,21 @@ jobs:
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+
         run: |
+
           echo "$DEPLOY_KEY" > deploy_key.pem
           chmod 600 deploy_key.pem
 
-          scp -o StrictHostKeyChecking=no deploy_key.pem ec2-user@$EC2_HOST:/home/ec2-user/.ssh/deploy_key.pem
+          echo "Copying deploy key to EC2..."
+
+          scp -o StrictHostKeyChecking=no \
+            deploy_key.pem \
+            ec2-user@$EC2_HOST:/home/ec2-user/.ssh/deploy_key.pem
 
           rm -f deploy_key.pem
+
+          echo "Connecting to EC2..."
 
           ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << 'EOF'
 
@@ -36,40 +44,66 @@ jobs:
 
             cd /home/ec2-user
 
-            echo "Setting up Git Deploy Key..."
+            echo "Setting SSH permissions..."
 
+            mkdir -p ~/.ssh
+            chmod 700 ~/.ssh
             chmod 600 ~/.ssh/deploy_key.pem
+
+            echo "Starting SSH Agent..."
 
             eval $(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
 
+            echo "Adding GitHub to known hosts..."
+
+            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+            echo "Configuring Git..."
+
             git config --global user.name "EC2 Deployer"
             git config --global user.email "ec2-deploy@synchron.com"
 
-            mkdir -p ~/.ssh
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-            
+            echo "Checking Docker Compose..."
+
+            docker compose version
+
+            echo "Checking repository..."
 
             if [ ! -d "Synchron-Backend" ]; then
-              echo "Cloning repo for the first time..."
+
+              echo "Cloning repository for first time..."
+
               git clone git@github.com:ayushsingh212/Synchron-Backend.git
+
               cd Synchron-Backend
+
             else
+
               echo "Pulling latest code..."
+
               cd Synchron-Backend
+
               git pull origin master
+
             fi
 
             echo "Stopping old containers..."
-            docker compose down --remove-orphans
 
-            echo "Removing unused docker resources..."
-            docker system prune -af
+            docker compose down --remove-orphans || true
+
+            echo "Cleaning Docker resources..."
+
+            docker system prune -af || true
 
             echo "Building and starting containers..."
+
             docker compose up -d --build
 
-            echo "Deployment completed successfully!"
+            echo "Showing running containers..."
 
+            docker ps
+
+            echo "Deployment completed successfully!"
 
           EOF
