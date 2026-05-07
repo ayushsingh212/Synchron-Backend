@@ -50,6 +50,11 @@ app.use(express.static("public"));
 
 app.use(cookieParser());
 
+// Root route
+app.get("/", (req, res) => {
+  res.send("Backend is running");
+});
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.status(200).json({
