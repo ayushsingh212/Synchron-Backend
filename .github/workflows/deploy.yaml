@@ -18,23 +18,31 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
-      - name: Copy deploy key and deploy to EC2
+      - name: Deploy to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
         run: |
           echo "$DEPLOY_KEY" > deploy_key.pem
           chmod 600 deploy_key.pem
-          scp -o StrictHostKeyChecking=no deploy_key.pem ubuntu@$EC2_HOST:/home/ubuntu/.ssh/deploy_key.pem
+
+          scp -o StrictHostKeyChecking=no deploy_key.pem ec2-user@$EC2_HOST:/home/ec2-user/.ssh/deploy_key.pem
+
           rm -f deploy_key.pem
 
-          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << 'EOF'
-            set -e
-            cd /home/ubuntu
+          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << 'EOF'
 
-            echo " Setting up Git Deploy Key..."
+            set -e
+
+            cd /home/ec2-user
+
+            echo "Setting up Git Deploy Key..."
+
+            chmod 600 ~/.ssh/deploy_key.pem
+
             eval $(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
+
             git config --global user.name "EC2 Deployer"
             git config --global user.email "ec2-deploy@synchron.com"
 
@@ -42,21 +50,24 @@ jobs:
             ssh-keyscan -H github.com >> ~/.ssh/known_hosts
 
             if [ ! -d "Synchron-Backend" ]; then
-              echo " Cloning repo for the first time..."
+              echo "Cloning repo for the first time..."
               git clone git@github.com:ayushsingh212/Synchron-Backend.git
               cd Synchron-Backend
             else
-              echo " Pulling latest code..."
+              echo "Pulling latest code..."
               cd Synchron-Backend
               git pull origin master
             fi
 
-            echo " Cleaning up old Docker resources..."
-            sudo docker compose down --volumes --remove-orphans
-            sudo docker system prune -af --volumes
+            echo "Stopping old containers..."
+            docker compose down --remove-orphans
 
-            echo " Rebuilding and starting containers..."
-            sudo docker compose up -d --build
+            echo "Removing unused docker resources..."
+            docker system prune -af
 
-            echo " Deployment completed successfully!"
+            echo "Building and starting containers..."
+            docker compose up -d --build
+
+            echo "Deployment completed successfully!"
+
           EOF

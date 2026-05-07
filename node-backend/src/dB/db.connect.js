@@ -1,30 +1,25 @@
-import { compareSync } from "bcrypt";
 import mongoose from "mongoose";
-import dotenv from "dotenv"
+import dns from "node:dns";
+import logger from "../utils/logger.js";
 
+// Force Node.js to use Google Public DNS for SRV lookups
+dns.setServers(["8.8.8.8", "8.8.4.4"]);
 
-dotenv.config();
+const connectDB = async function () {
+  const mongoUrl = process.env.MONGODB_URL;
 
+  if (!mongoUrl) {
+    logger.error("MONGODB_URL is not defined in environment variables");
+    process.exit(1);
+  }
 
+  try {
+    const connect = await mongoose.connect(mongoUrl);
+    logger.info(`MongoDB connected: ${connect.connection.host}`);
+  } catch (error) {
+    logger.error("MongoDB connection error", { error: error.message });
+    process.exit(1);
+  }
+};
 
-const connectDB = async function() {
-  
- try {
-  console.log("Here are variable",process.env.MONGODB_URL)
-
-const connect = await mongoose.connect(`${process.env.MONGODB_URL}`) 
-
-console.log("The database has been connected successfuly",connect.connection.host)
-
-
-
-
-  
- } catch (error) {
-   console.log("MongoDB error ",error)
-   process.exit(1)
- }
-
-
-}
-export {connectDB}
+export { connectDB };

@@ -1,6 +1,7 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import axios from "axios";
 import ApiError from "../utils/apiError.js";
+import logger from "../utils/logger.js";
 import ApiResponse from "../utils/apiResponse.js";
 import { FacultyTimetable } from "../models/facultyTimetable.model.js";
 import path from "path";
@@ -16,43 +17,27 @@ import { TimetableRequest } from "../models/timetableRequest.model.js";
 
 const { FLASK_URL } = process.env;
 
-export const getTheDynamicResult = asyncHandler(async (req, res) => {
-  console.log("The result is going to be send");
-
-  const flaskRes = await axios.post("");
-});
-let c = 1;
 export const generateByGivingData = asyncHandler(async (req, res) => {
-  console.log("I am working manual data", c);
-  c++;
-
   const parsed_config = req.body;
 
-  // console.log( "I am the coming parsed config",  parsed_config)
-
   if (!parsed_config) {
-    throw new ApiError(404, "Please provide the input for the generation");
+    throw new ApiError(400, "Please provide the input for the generation");
   }
 
-  // const sendingTheData = await axios.post(`http://localhost:8080/api/timetable/sendData`,parsed_config,{
-  //   withCredentials:true
-  // })
-
-  // if (!sendingTheData) {
-  //   throw new ApiError(500, "Sorry our model is busy")
-  // }
-
+  // TODO: Implement actual data forwarding to the scheduler service
   return res.status(202).json(new ApiResponse(202, {}, "Sent for Generation"));
 });
 
-export const getInfoPdf = async (req, res) => {
-  try {
-    const pdfPath = req.file.path;
+export const getInfoPdf = asyncHandler(async (req, res) => {
+  if (!req.file) {
+    throw new ApiError(400, "PDF file is required");
+  }
 
+  const pdfPath = req.file.path;
+
+  try {
     const formData = new FormData();
     formData.append("file", fs.createReadStream(pdfPath));
-    // formData.append("college_name", req.body.college_name || "");
-    // formData.append("session", req.body.session || "");
 
     const flaskRes = await axios.post(
       `${FLASK_URL}/api/parse-timetable`,
@@ -62,27 +47,25 @@ export const getInfoPdf = async (req, res) => {
       }
     );
 
-    fs.unlink(pdfPath, (err) => {
-      if (err) {
-        console.log("Error while deleting the pdf", err);
-      }
+    // Clean up temp file
+    fs.unlink(pdfPath, (unlinkErr) => {
+      if (unlinkErr) console.warn("Error deleting temp PDF:", unlinkErr.message);
     });
 
-    res.json({
+    return res.json({
       success: true,
       parsedConfig: flaskRes.data.data,
       extractionInfo: flaskRes.data.extraction_info || {},
     });
   } catch (err) {
-    fs.unlink(pdfPath, (err) => {
-      if (err) {
-        console.log("Error while deleting the pdf", err);
-      }
+    // Clean up temp file even on error
+    fs.unlink(pdfPath, (unlinkErr) => {
+      if (unlinkErr) console.warn("Error deleting temp PDF:", unlinkErr.message);
     });
-    console.error("PDF upload error:", err.response?.data || err.message);
-    res.status(500).json({ success: false, error: "PDF processing failed" });
+    logger.error("PDF upload error", { error: err.response?.data || err.message });
+    throw new ApiError(500, "PDF processing failed");
   }
-};
+});
 
 /**
  * Trigger timetable generation in Flask (background)
@@ -591,7 +574,7 @@ export const startTimeTableCreation = asyncHandler(async (req, res) => {
 
   const gaData = response?.data;
 
-  console.log("Here is this coming from flask ", gaData);
+  logger.info("Received GA response from Flask", { solutionCount: gaData?.solutions?.length || 0 });
   if (
     !gaData ||
     !Array.isArray(gaData.solutions) ||
@@ -691,7 +674,7 @@ export const getSectionTimeTablesDbSpec = asyncHandler(async (req, res) => {
       new ApiResponse(200, grouped, "Section timetables fetched successfully")
     );
   } catch (error) {
-    console.error("Unexpected error in getSectionTimeTables:", error);
+    logger.error("Error in getSectionTimeTables", { error: error.message });
 
     return res.status(500).json(new ApiError(500, "Internal server error"));
   }
@@ -732,7 +715,7 @@ export const getSectionTimeTablesDb = asyncHandler(async (req, res) => {
       new ApiResponse(200, grouped, "Section timetables fetched successfully")
     );
   } catch (error) {
-    console.error("Unexpected error in getSectionTimeTables:", error);
+    logger.error("Error in getSectionTimeTables", { error: error.message });
 
     return res.status(500).json(new ApiError(500, "Internal server error"));
   }
@@ -765,7 +748,7 @@ export const getSingleSectionTimeTable = asyncHandler(async (req, res) => {
       new ApiResponse(200, doc, "Section timetable fetched successfully")
     );
   } catch (error) {
-    console.error("Error in getSingleSectionTimetable:", error);
+    logger.error("Error in getSingleSectionTimetable", { error: error.message });
     return res.status(500).json(new ApiError(500, "Internal server error"));
   }
 });

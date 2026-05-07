@@ -8,7 +8,7 @@ import { Organisation } from "../models/organisation.model.js";
 import jwt from "jsonwebtoken"
 import { options } from "../middlewares/auth.middleware.js";
 
-const OTP_EXPIRY = 2 * 60; 
+const OTP_EXPIRY = 5 * 60;  // 5 minutes (must match the value stated in email template)
 const RATE_LIMIT = 10;    
 const RESEND_LIMIT = 60;   
 

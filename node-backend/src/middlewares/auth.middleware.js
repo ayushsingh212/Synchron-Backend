@@ -5,7 +5,6 @@ import { Organisation } from "../models/organisation.model.js";
 
 const verifyJWT = asyncHandler(async (req, res, next) => {
   let token = null;
-  console.log("verifyJWT has been hitted");
   if (req.cookies?.accessToken) {
     token = req.cookies.accessToken;
   } else if (req.headers.authorization?.startsWith("Bearer ")) {

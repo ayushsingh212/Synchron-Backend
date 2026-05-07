@@ -3,7 +3,6 @@ import mongoosePaginate from "mongoose-paginate-v2";
 import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { minLength } from "zod";
 
 const organisationSchema = new Schema(
   {
@@ -76,8 +75,23 @@ const organisationSchema = new Schema(
 );
 
 organisationSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
-  this.password = await bcrypt.hash(this.password, 12);
+  // Hash organisation password if modified
+  if (this.isModified("password")) {
+    this.password = await bcrypt.hash(this.password, 12);
+  }
+
+  // Hash any new/modified senate passwords
+  if (this.senates && this.senates.length > 0) {
+    for (const senate of this.senates) {
+      if (senate.isModified && senate.isModified("password")) {
+        senate.password = await bcrypt.hash(senate.password, 12);
+      } else if (senate.password && !senate.password.startsWith("$2")) {
+        // Fallback: hash if it doesn't look like a bcrypt hash
+        senate.password = await bcrypt.hash(senate.password, 12);
+      }
+    }
+  }
+
   next();
 });
 

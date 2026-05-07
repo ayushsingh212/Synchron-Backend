@@ -244,7 +244,7 @@ const sendEmail = (email, subject, data, purpose) => {
           <div class="otp-label">Your One-Time Password (OTP)</div>
           <div class="otp-code">${data}</div>
           <div style="color: #718096; font-size: 14px; margin-top: 12px;">
-            This code will expire in <span class="highlight">10 minutes</span>
+            This code will expire in <span class="highlight">5 minutes</span>
           </div>
         </div>
         

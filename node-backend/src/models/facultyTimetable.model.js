@@ -1,6 +1,5 @@
 // models/facultyTimetable.model.js
 import mongoose, { Schema } from "mongoose";
-import { lowercase } from "zod";
 
 const timetableSchema = new Schema(
   { 

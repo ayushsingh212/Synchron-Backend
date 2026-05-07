@@ -7,15 +7,34 @@ from nlp_models import NLPResponse
 
 # --- Configuration ---
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
+GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+
+# Determine which LLM backend to use
+if CEREBRAS_API_KEY:
+    NLP_LLM_API_URL = CEREBRAS_API_URL
+    NLP_LLM_API_KEY = CEREBRAS_API_KEY
+    NLP_LLM_MODEL = "llama-4-scout-17b-16e-instruct"
+    logger.info("NLP Processor using Cerebras backend")
+elif GEMINI_API_KEY:
+    NLP_LLM_API_URL = GEMINI_API_URL
+    NLP_LLM_API_KEY = GEMINI_API_KEY
+    NLP_LLM_MODEL = "gemini-2.0-flash"
+    logger.info("NLP Processor using Gemini backend (fallback)")
+else:
+    NLP_LLM_API_URL = None
+    NLP_LLM_API_KEY = None
+    NLP_LLM_MODEL = None
+    logger.warning("No LLM API key found for NLP processor")
 
 logger = logging.getLogger(__name__)
 
 class TimetableNLPProcessor:
     def __init__(self, current_config: Dict[str, Any]):
         self.config = current_config
-        if not CEREBRAS_API_KEY:
-            raise EnvironmentError("Cerebras API key is missing.")
+        if not NLP_LLM_API_KEY:
+            raise EnvironmentError("No LLM API key available. Set CEREBRAS_API_KEY or GEMINI_API_KEY.")
         
         # Pre-extract valid IDs
         self.valid_faculty = {f['name']: f.get('faculty_id', 'Unknown') for f in self.config.get('faculty', [])}
@@ -95,10 +114,10 @@ class TimetableNLPProcessor:
         }}
         """
 
-    def _call_cerebras(self, system_prompt: str, user_text: str) -> str:
-        headers = {"Authorization": f"Bearer {CEREBRAS_API_KEY}", "Content-Type": "application/json"}
+    def _call_llm(self, system_prompt: str, user_text: str) -> str:
+        headers = {"Authorization": f"Bearer {NLP_LLM_API_KEY}", "Content-Type": "application/json"}
         data = {
-            "model": "gpt-oss-120b", # or llama3-70b-8192 if using Groq/Cerebras aliases
+            "model": NLP_LLM_MODEL,
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"USER REQUEST: {user_text}"}
@@ -106,13 +125,13 @@ class TimetableNLPProcessor:
             "response_format": {"type": "json_object"}
         }
         
-        resp = requests.post(CEREBRAS_API_URL, headers=headers, json=data)
+        resp = requests.post(NLP_LLM_API_URL, headers=headers, json=data)
         resp.raise_for_status()
         return resp.json()['choices'][0]['message']['content']
 
     def parse_request(self, user_text: str) -> Dict[str, Any]:
         try:
-            raw_json = self._call_cerebras(self._build_system_prompt(), user_text)
+            raw_json = self._call_llm(self._build_system_prompt(), user_text)
             # Basic cleanup
             if "```json" in raw_json:
                 raw_json = raw_json.split("```json")[1].split("```")[0].strip()

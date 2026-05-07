@@ -78,6 +78,12 @@ const organisationData = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Compound index for the primary query pattern
+organisationData.index(
+  { organisationId: 1, course: 1, year: 1, semester: 1 },
+  { unique: true }
+);
+
 export const OrganisationData = mongoose.model(
   "OrganisationData",
   organisationData

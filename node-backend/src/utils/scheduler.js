@@ -105,4 +105,4 @@ function generateTimetables({ days = 5, slotsPerDay = 6, courses = [], rooms = [
   return results;
 }
 
-module.exports = { generateTimetables };
+export { generateTimetables };

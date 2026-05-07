@@ -62,9 +62,18 @@ app = FastAPI(
 )
 
 # CORS Configuration
+allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("FRONTEND_URL", "http://localhost:5173").split(",")
+    if origin.strip()
+]
+# Always allow localhost for development
+if "http://localhost:5173" not in allowed_origins:
+    allowed_origins.append("http://localhost:5173")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Adjust in production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -73,6 +82,17 @@ app.add_middleware(
 # App configuration
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 ALLOWED_EXTENSIONS = {'.pdf', '.xlsx', '.xls', '.xlsm', '.json'}
+
+# Health check endpoint
+@app.get("/health")
+def health_check():
+    """Health check for Docker/load balancer monitoring"""
+    return {
+        "status": "ok",
+        "service": "finalscheduler",
+        "timestamp": datetime.now().isoformat(),
+        "llm_backend": "cerebras" if USE_CEREBRAS else ("gemini" if llm_extractor else "none"),
+    }
 
 # =============================================================================
 # PYDANTIC MODELS

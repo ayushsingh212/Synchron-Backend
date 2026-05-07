@@ -9,7 +9,6 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - mongodb
       - redis
     networks:
       - final-network
@@ -47,33 +46,6 @@ services:
           memory: 350M
         reservations:
           memory: 250M
-
-  mongodb:
-    image: mongo:6
-    container_name: finalscheduler-mongo
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongo_data:/data/db
-    networks:
-      - final-network
-    command: ["mongod", "--wiredTigerCacheSizeGB", "0.25"]
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-        reservations:
-          memory: 256M
 
   redis:
     image: redis:7

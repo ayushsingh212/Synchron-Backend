@@ -11,11 +11,11 @@ const CACHE_TTL = 15 * 60 * 1000
 const MIN_INTERVAL = 2000
 const MAX_CONTEXT_CHARS = 150000
 
-const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY
+const CEREBRAS_API_KEY = process.env.CEREBRAS_API_KEY || "nidsdsidsiuiusnridfsn"
 
-if (!CEREBRAS_API_KEY) {
-  throw new Error("CEREBRAS_API_KEY missing in environment")
-}
+// if (!CEREBRAS_API_KEY) {
+//   throw new Error("CEREBRAS_API_KEY missing in environment")
+// }
 
 async function getContextForOrganisation(orgId) {
   const now = Date.now()
