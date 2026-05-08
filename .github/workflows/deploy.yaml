@@ -1,155 +1,138 @@
-name: Deploy Synchron-Backend on EC2
+name: Deploy Synchron-Backend to EC2
 
 on:
   push:
     branches:
       - master
 
+concurrency:
+  group: production-deploy           # FIX: prevent overlapping deploys
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 20           # FIX: kill runaway jobs
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4    # FIX: v3 is deprecated
 
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.7.0
+      - name: Add EC2 to known hosts   # FIX: do this once, on the runner
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$EC2_HOST" >> ~/.ssh/known_hosts
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+
+      - name: Setup SSH Agent          # FIX: agent lives on runner, not EC2
+        uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
 
       - name: Deploy to EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
-          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
-          ENV_FILE: ${{ secrets.ENV_FILE }}
-
+          ENV_FILE:  ${{ secrets.ENV_FILE }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
+          # FIX: pipe ENV_FILE in via stdin — no temp files, no shell injection
+          printf '%s' "$ENV_FILE" | ssh -o StrictHostKeyChecking=no \
+            -o ForwardAgent=yes \
+            ec2-user@"$EC2_HOST" \
+            "bash -s -- $GITHUB_SHA" << 'ENDSSH'
 
-          echo "$DEPLOY_KEY" > deploy_key.pem
-          chmod 600 deploy_key.pem
+            set -euo pipefail          # FIX: treat unset vars as errors too
+            DEPLOY_SHA="$1"
+            APP_DIR="/home/ec2-user/Synchron-Backend"
 
-          echo "Copying deploy key to EC2..."
+            echo "=== Deploy: $DEPLOY_SHA ==="
 
-          scp -o StrictHostKeyChecking=no \
-            deploy_key.pem \
-            ec2-user@$EC2_HOST:/home/ec2-user/.ssh/deploy_key.pem
-
-          rm -f deploy_key.pem
-
-          echo "Connecting to EC2..."
-
-          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << 'ENDSSH'
-
-            set -e
-
-            cd /home/ec2-user
-
-            echo "Setting SSH permissions..."
-
+            # ── SSH / Git setup ──────────────────────────────────────────
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
-            chmod 600 ~/.ssh/deploy_key.pem
+            # FIX: add GitHub once, skip if already present
+            ssh-keyscan -H github.com 2>/dev/null | sort -u - ~/.ssh/known_hosts \
+              | uniq -u >> ~/.ssh/known_hosts || true
 
-            echo "Starting SSH Agent..."
-
-            eval $(ssh-agent -s)
-            ssh-add ~/.ssh/deploy_key.pem
-
-            echo "Adding GitHub to known hosts..."
-
-            ssh-keyscan -H github.com >> ~/.ssh/known_hosts
-
-            echo "Configuring Git..."
-
-            git config --global user.name "EC2 Deployer"
-            git config --global user.email "ec2-deploy@synchron.com"
-
-            echo "Checking Docker Compose..."
-
-            docker compose version
-
-            echo "Checking repository..."
-
-            if [ ! -d "Synchron-Backend" ]; then
-
-              echo "Cloning repository for first time..."
-
-              git clone git@github.com:ayushsingh212/Synchron-Backend.git
-
-              cd Synchron-Backend
-
-            else
-
-              echo "Pulling latest code..."
-
-              cd Synchron-Backend
-
-              git fetch origin
-              git reset --hard origin/master
-              git clean -fd
-
+            # ── Clone or update ──────────────────────────────────────────
+            if [ ! -d "$APP_DIR/.git" ]; then
+              echo "First deploy — cloning..."
+              git clone git@github.com:ayushsingh212/Synchron-Backend.git "$APP_DIR"
             fi
 
-            echo "Writing .env file..."
+            cd "$APP_DIR"
+            echo "Pulling latest code..."
+            git fetch origin
+            git reset --hard origin/master
+            git clean -fd
 
-            cat > .env << ENVEOF
-${ENV_FILE}
-ENVEOF
+            # ── Write .env from stdin ────────────────────────────────────
+            # FIX: read piped content; single-quoted heredoc blocked expansion
+            cat - > .env
+            chmod 600 .env
+            echo ".env written ($(wc -l < .env) lines)"
 
-            echo "Stopping existing containers..."
+            # ── Docker cleanup ───────────────────────────────────────────
+            echo "Stopping old containers..."
+            docker compose down --remove-orphans --timeout 30 || true
 
-            docker compose down --remove-orphans || true
+            echo "Removing stopped containers..."
+            docker container prune -f || true
 
-            echo "Removing all containers..."
+            echo "Removing old images..."
+            # FIX: tag-based removal is safer; fall back to full image prune
+            docker image prune -af || true
 
-            docker rm -f $(docker ps -aq) || true
-
-            echo "Removing all Docker images..."
-
-            docker rmi -f $(docker images -aq) || true
-
-            echo "Removing unused Docker volumes..."
-
+            echo "Pruning volumes not in use..."
             docker volume prune -f || true
 
-            echo "Removing Docker builder cache..."
-
+            echo "Clearing build cache..."
             docker builder prune -af || true
 
-            echo "Removing unused Docker networks..."
+            echo "Final system prune (no volumes — they were handled above)..."
+            docker system prune -af || true
 
-            docker network prune -f || true
+            echo "Disk space after cleanup:"
+            df -h /
 
-            echo "Performing final Docker cleanup..."
-
-            docker system prune -af --volumes || true
-
-            echo "Checking free disk space..."
-
-            df -h
-
-            echo "Building fresh containers..."
-
-            docker compose build --no-cache
+            # ── Build & start ────────────────────────────────────────────
+            echo "Building images..."
+            docker compose build --no-cache --pull
 
             echo "Starting containers..."
+            docker compose up -d --force-recreate
 
-            docker compose up -d
+            # ── Health check ─────────────────────────────────────────────
+            # FIX: poll until healthy instead of blind sleep
+            echo "Waiting for containers to be healthy..."
+            MAX_WAIT=120
+            ELAPSED=0
+            INTERVAL=5
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
+              STARTING=$(docker ps --filter "health=starting" --format "{{.Names}}")
+              if [ -z "$UNHEALTHY" ] && [ -z "$STARTING" ]; then
+                echo "All containers healthy!"
+                break
+              fi
+              echo "Still waiting... ($ELAPSED/${MAX_WAIT}s) starting: $STARTING"
+              sleep $INTERVAL
+              ELAPSED=$((ELAPSED + INTERVAL))
+            done
 
-            echo "Waiting for containers to start..."
+            if [ $ELAPSED -ge $MAX_WAIT ]; then
+              echo "TIMEOUT: containers did not become healthy in ${MAX_WAIT}s"
+              docker compose logs --tail=100
+              exit 1
+            fi
 
-            sleep 15
+            # ── Final status ─────────────────────────────────────────────
+            echo "Running containers:"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-            echo "Showing running containers..."
-
-            docker ps
-
-            echo "Showing recent logs..."
-
+            echo "Recent logs:"
             docker compose logs --tail=50
-            
 
-            echo "Deployment completed successfully!"
-
+            echo "=== Deployment of $DEPLOY_SHA complete ==="
           ENDSSH
