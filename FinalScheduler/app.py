@@ -10,6 +10,10 @@ import logging
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+
+# Load environment variables BEFORE importing modules that read env vars
+load_dotenv()
+
 import tempfile
 from pathlib import Path
 from nlp_processor import TimetableNLPProcessor
@@ -18,9 +22,6 @@ from db_utils import get_config_by_params
 # =============================================================================
 # CONFIGURATION & SETUP
 # =============================================================================
-
-# Load environment variables
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

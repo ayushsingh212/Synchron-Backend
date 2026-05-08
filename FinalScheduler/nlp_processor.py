@@ -6,6 +6,8 @@ from typing import Dict, Any, List
 from nlp_models import NLPResponse
 
 # --- Configuration ---
+logger = logging.getLogger(__name__)
+
 CEREBRAS_API_URL = "https://api.cerebras.ai/v1/chat/completions"
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
 CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
@@ -27,8 +29,6 @@ else:
     NLP_LLM_API_KEY = None
     NLP_LLM_MODEL = None
     logger.warning("No LLM API key found for NLP processor")
-
-logger = logging.getLogger(__name__)
 
 class TimetableNLPProcessor:
     def __init__(self, current_config: Dict[str, Any]):
