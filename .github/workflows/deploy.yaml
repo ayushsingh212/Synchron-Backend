@@ -39,7 +39,7 @@ jobs:
 
           echo "Connecting to EC2..."
 
-          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << ENDSSH
+          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << 'ENDSSH'
 
             set -e
 
@@ -53,7 +53,7 @@ jobs:
 
             echo "Starting SSH Agent..."
 
-            eval \$(ssh-agent -s)
+            eval $(ssh-agent -s)
             ssh-add ~/.ssh/deploy_key.pem
 
             echo "Adding GitHub to known hosts..."
@@ -85,31 +85,61 @@ jobs:
 
               cd Synchron-Backend
 
-              git pull origin master
+              git fetch origin
+              git reset --hard origin/master
+              git clean -fd
 
             fi
 
             echo "Writing .env file..."
 
-            cat > .env << 'ENVEOF'
-          ${ENV_FILE}
-          ENVEOF
+            cat > .env << ENVEOF
+${ENV_FILE}
+ENVEOF
 
-            echo "Stopping old containers..."
+            echo "Stopping existing containers..."
 
             docker compose down --remove-orphans || true
 
-            echo "Cleaning Docker resources..."
+            echo "Removing all containers..."
 
-            docker system prune -af || true
+            docker rm -f $(docker ps -aq) || true
 
-            echo "Building and starting containers..."
+            echo "Removing all Docker images..."
 
-            docker compose up -d --build
+            docker rmi -f $(docker images -aq) || true
+
+            echo "Removing unused Docker volumes..."
+
+            docker volume prune -f || true
+
+            echo "Removing Docker builder cache..."
+
+            docker builder prune -af || true
+
+            echo "Removing unused Docker networks..."
+
+            docker network prune -f || true
+
+            echo "Performing final Docker cleanup..."
+
+            docker system prune -af --volumes || true
+
+            echo "Checking free disk space..."
+
+            df -h
+
+            echo "Building fresh containers..."
+
+            docker compose build --no-cache
+
+            echo "Starting containers..."
+
+            docker compose up -d
 
             echo "Waiting for containers to start..."
 
-            sleep 10
+            sleep 15
 
             echo "Showing running containers..."
 
@@ -117,7 +147,7 @@ jobs:
 
             echo "Showing recent logs..."
 
-            docker compose logs --tail=20
+            docker compose logs --tail=50
 
             echo "Deployment completed successfully!"
 
