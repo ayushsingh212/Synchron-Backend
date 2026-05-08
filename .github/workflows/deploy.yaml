@@ -148,6 +148,7 @@ ENVEOF
             echo "Showing recent logs..."
 
             docker compose logs --tail=50
+            
 
             echo "Deployment completed successfully!"
 
