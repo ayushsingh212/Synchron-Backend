@@ -492,8 +492,14 @@ class TimetableExtractor:
 
             except Exception as e:
                 last_error = e
+                logger.error(f"Attempt {attempt + 1} failed: {str(e)}")
+                try:
+                    logger.error(f"Raw response was: {response_text[:500]}...")
+                except:
+                    pass
                 time.sleep(1)
 
+        logger.error(f"All extraction attempts failed. Last error: {str(last_error)}")
         return self.enhance_extracted_data({"college_info": {}})
 
     # --------------------------------------------------------
