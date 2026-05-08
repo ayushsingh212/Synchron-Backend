@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import fs from "fs";
 import allRouter from "./routes/index.js";
 import { noEmojiMiddleware } from "./middlewares/noEmoji.middleware.js";
 import ApiError from "./utils/apiError.js";
@@ -9,6 +10,13 @@ import { ZodError } from "zod";
 import logger from "./utils/logger.js";
 
 const app = express();
+
+// Trust first proxy (Nginx/Caddy) so rate-limiter reads the real client IP
+app.set("trust proxy", 1);
+
+// Ensure upload directories exist at startup
+fs.mkdirSync("public/temp", { recursive: true });
+fs.mkdirSync("public/uploads", { recursive: true });
 
 const {FRONTEND_URL,FRONTEND_URL2,BACKEND_URL} = process.env;
 
