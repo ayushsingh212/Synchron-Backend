@@ -479,13 +479,15 @@ class TimetableExtractor:
 
         for attempt in range(max_retries):
             try:
-                max_text_length = 100000
+                # Cerebras llama3.1-8b has an 8192 token limit. 
+                # Prompt takes ~1k tokens, output needs ~4k tokens, leaving ~3k tokens (12,000 chars) for text.
+                max_text_length = 12000
                 if len(document_text) > max_text_length:
-                    document_text = document_text[:max_text_length] + "\n[TRUNCATED FOR SPEED]"
-                    logger.warning("Document truncated")
+                    document_text = document_text[:max_text_length] + "\n[TRUNCATED FOR LIMIT]"
+                    logger.warning("Document truncated for Cerebras context limits")
 
                 full_prompt = self.extraction_prompt.format(document_text=document_text)
-                response_text, latency = self._generate_with_cerebras(full_prompt)
+                response_text, latency = self._generate_with_cerebras(full_prompt, max_tokens=4000)
 
                 parsed_data = self.clean_and_validate_json(response_text)
                 return self.enhance_extracted_data(parsed_data)
