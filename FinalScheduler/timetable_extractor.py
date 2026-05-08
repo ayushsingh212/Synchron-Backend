@@ -636,7 +636,14 @@ class TimetableExtractor:
                 logger.warning("Cache read failed: %s", exc)
 
         chunks = self._chunk_document(document_text)
-        result = asyncio.run(self._extract_all_chunks(chunks))
+
+        # FastAPI/uvicorn already runs an event loop, so asyncio.run() would
+        # crash with "cannot be called from a running event loop".
+        # Instead, spin up a *new* loop in a background thread.
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(asyncio.run, self._extract_all_chunks(chunks))
+            result = future.result()
 
         if self.enable_cache:
             try:
