@@ -30,7 +30,7 @@ async function getRedisClient() {
   });
 
   try {
-    // await redisClient.connect();
+    await redisClient.connect();
   } catch (err) {
     logger.error("Redis connection failed", { error: err.message });
     isConnected = false;
