@@ -13,3 +13,5 @@ requests
 reportlab
 pymongo
 python-multipart
+httpx
+json-repair
