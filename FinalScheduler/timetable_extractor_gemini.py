@@ -432,16 +432,16 @@ class TimetableExtractor:
         if not data:
             data = {}
 
-        data.setdefault("college_info", {
-            "name": "Extracted College",
-            "session": "2025-26",
-            "effective_date": "2025-09-15"
-        })
+        if "college_info" not in data or not isinstance(data["college_info"], dict):
+            data["college_info"] = {}
+        data["college_info"].setdefault("name", "Extracted College")
+        data["college_info"].setdefault("session", "2025-26")
+        data["college_info"].setdefault("effective_date", "2025-09-15")
 
-        data.setdefault("time_slots", {
-            "periods": [],
-            "working_days": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
-        })
+        if "time_slots" not in data or not isinstance(data["time_slots"], dict):
+            data["time_slots"] = {}
+        data["time_slots"].setdefault("periods", [])
+        data["time_slots"].setdefault("working_days", ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"])
 
         data.setdefault("departments", [])
         data.setdefault("subjects", [])
