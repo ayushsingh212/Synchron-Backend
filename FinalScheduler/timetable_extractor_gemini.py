@@ -48,7 +48,7 @@ class TimetableExtractor:
             }
 
             test_payload = {
-                "model": "gpt-oss-120b",
+                "model": "llama3.1-8b",
                 "messages": [{"role": "user", "content": "Test"}],
                 "max_tokens": 10,
                 "temperature": 0.0
@@ -274,7 +274,7 @@ class TimetableExtractor:
         }
 
         payload = {
-            "model": "gpt-oss-120b",
+            "model": "llama3.1-8b",
             "messages": [{"role": "user", "content": prompt}],
             "max_tokens": max_tokens,
             "temperature": 0.0,
