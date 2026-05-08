@@ -140,7 +140,7 @@ USE_CEREBRAS = False
 
 # Try Cerebras first (ultra-fast)
 try:
-    from timetable_extractor_gemini import TimetableExtractor
+    from timetable_extractor import TimetableExtractor
     CEREBRAS_API_KEY = os.getenv('CEREBRAS_API_KEY')
     
     if CEREBRAS_API_KEY:
