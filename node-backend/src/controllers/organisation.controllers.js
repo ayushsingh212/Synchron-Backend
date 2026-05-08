@@ -112,7 +112,7 @@ const registerOrganisation = asyncHandler(async (req, res) => {
     organisationEmail,
     password,
     organisationContactNumber,
-    avatar: avatar?.url || "http",
+    avatar: avatar?.secure_url || "https://res.cloudinary.com/dmlawcmhk/image/upload/v1/default-avatar.png",
   });
 
   const organisationObj = organisation.toObject ? organisation.toObject() : { ...organisation };
@@ -284,10 +284,10 @@ const updateAvatar = asyncHandler(async (req, res) => {
   const avatar = await uploadOnCloudinary(avatarLocalPath);
   if (!avatar) throw new ApiError(500, "Avatar upload failed");
 
-  organisation.avatar = avatar.url;
+  organisation.avatar = avatar.secure_url;
   await organisation.save();
 
-  return res.status(200).json(new ApiResponse(200, { avatar: avatar.url }, "Avatar updated successfully"));
+  return res.status(200).json(new ApiResponse(200, { avatar: avatar.secure_url }, "Avatar updated successfully"));
 });
 
 
