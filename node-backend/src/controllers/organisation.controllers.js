@@ -100,12 +100,18 @@ const registerOrganisation = asyncHandler(async (req, res) => {
 
   const avatarLocalPath = req?.file?.path;
   // if (!avatarLocalPath) throw new ApiError(400, "Avatar file is required");
-   let avatar;
-  if(avatarLocalPath){
-  avatar = await uploadOnCloudinary(avatarLocalPath);
-  if (!avatar) throw new ApiError(500, "Failed to upload avatar");
+  let avatar;
+  if (avatarLocalPath) {
+    try {
+      avatar = await uploadOnCloudinary(avatarLocalPath);
+      if (!avatar) {
+        console.warn("Cloudinary returned empty response, falling back to default avatar");
+      }
+    } catch (cloudinaryError) {
+      console.error("Cloudinary upload failed during registration:", cloudinaryError);
+      // Fallback to default avatar, do not block registration
+    }
   }
- 
 
   const organisation = await Organisation.create({
     organisationName,
@@ -139,9 +145,9 @@ const verifyOrganisationEmail = asyncHandler(async (req, res) => {
   org.isEmailVerified = true;
   await org.save();
 
-  const {accessToken,refreshToken} = await generateAccessAndRefreshToken(org._id);
-    const adminToken = org.generateAdminToken();
-  return res.status(200).cookie("adminToken",adminToken,options).cookie("accessToken",accessToken,options).cookie("refreshToken",refreshToken,options).json(new ApiResponse(200, {}, "Email verified successfully"));
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(org._id);
+  const adminToken = org.generateAdminToken();
+  return res.status(200).cookie("adminToken", adminToken, options).cookie("accessToken", accessToken, options).cookie("refreshToken", refreshToken, options).json(new ApiResponse(200, {}, "Email verified successfully"));
 });
 
 
@@ -156,7 +162,7 @@ const loginOrganisation = asyncHandler(async (req, res) => {
     organisation = await Organisation.findOne({ organisationEmail, isEmailVerified: true });
     if (!organisation) throw new ApiError(404, "Organisation not found");
 
-    const otpVerified = await verifyOtp(organisationEmail, otp,"login");
+    const otpVerified = await verifyOtp(organisationEmail, otp, "login");
     if (!otpVerified) throw new ApiError(400, "Invalid OTP");
   } else {
     validateOrThrow(loginWithPasswordSchema, { organisationEmailOrorganisationContactNumber, password });
@@ -188,7 +194,7 @@ const loginOrganisation = asyncHandler(async (req, res) => {
     .status(200)
     .cookie("refreshToken", refreshToken, options)
     .cookie("accessToken", accessToken, options)
-    .cookie("adminToken",adminToken,options)
+    .cookie("adminToken", adminToken, options)
     .json(new ApiResponse(200, safeOrganisation, "Login successful"));
 });
 
@@ -203,8 +209,8 @@ const logoutOrganisation = asyncHandler(async (req, res) => {
     .status(202)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .clearCookie("adminToken",options)
-    .clearCookie("senateToken",options)
+    .clearCookie("adminToken", options)
+    .clearCookie("senateToken", options)
     .json(new ApiResponse(200, {}, "Organisation logged out successfully"));
 });
 
@@ -347,7 +353,7 @@ const getCurrentOrganisation = asyncHandler(async (req, res) => {
 });
 
 
- const getAllOrganisation = asyncHandler(async (req, res) => {
+const getAllOrganisation = asyncHandler(async (req, res) => {
   const organisations = await Organisation.find({}).select("-password");
   if (!organisations || organisations.length === 0) {
     throw new ApiError(404, "No organisation exist");

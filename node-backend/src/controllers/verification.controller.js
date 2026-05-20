@@ -45,7 +45,7 @@ export const sendOTP = asyncHandler(async (req, res) => {
   }
   
   const isOrganisationExist  = await Organisation.findOne({
-    organisationEmail,
+    organisationEmail: { $regex: new RegExp(`^${organisationEmail}$`, "i") },
     isEmailVerified
   })
  
@@ -130,7 +130,9 @@ export const checkOtp = asyncHandler(async (req, res) => {
  if(purpose==="reset-password")
  {
     
-  const organisation = await Organisation.findOne({organisationEmail}).lean()
+  const organisation = await Organisation.findOne({
+    organisationEmail: { $regex: new RegExp(`^${organisationEmail}$`, "i") }
+  }).lean()
   
   if(!organisation)
   {

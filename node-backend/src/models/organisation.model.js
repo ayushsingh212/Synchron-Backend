@@ -51,7 +51,8 @@ const organisationSchema = new Schema(
         seneteEmail:{
            type:String,
            trim:true,
-           unique:true
+           unique:true,
+           sparse:true
         }, 
         role:{
           type:String,

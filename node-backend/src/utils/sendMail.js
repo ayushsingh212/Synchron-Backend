@@ -5,16 +5,23 @@ import dotenv from "dotenv"
 //   path:"../../.env"
 // })
 
-const transporter = nodemailer.createTransport({
-  secure: true,
-  host: "smtp.gmail.com",
-  port: 465,
-  service: "gmail",
-  auth: {
-    user: process.env.COMP_EMAIL,
-    pass: process.env.COMP_PASS,
-  },
-});
+let transporter;
+
+const getTransporter = () => {
+  if (!transporter) {
+    transporter = nodemailer.createTransport({
+      secure: true,
+      host: "smtp.gmail.com",
+      port: 465,
+      service: "gmail",
+      auth: {
+        user: process.env.COMP_EMAIL,
+        pass: process.env.COMP_PASS,
+      },
+    });
+  }
+  return transporter;
+};
 
 const sendEmail = (email, subject, data, purpose) => {
   const htmlContent = `
@@ -283,7 +290,7 @@ const sendEmail = (email, subject, data, purpose) => {
   </html>
   `;
 
-  transporter.sendMail({
+  getTransporter().sendMail({
     from: `"TimeTableScheduler" <noreply@timetablescheduler.com>`,
     to: email,
     subject: subject,

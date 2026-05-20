@@ -22,6 +22,7 @@ import hashlib
 import io
 import json
 import logging
+import random
 import re
 import shelve
 import time
@@ -545,7 +546,13 @@ class TimetableExtractor:
                 last_exc = exc
                 logger.warning("LLM attempt %d/%d failed: %s", attempt, self.max_retries, exc)
                 if attempt < self.max_retries:
-                    await asyncio.sleep(RETRY_BACKOFF_SECS)
+                    # Exponential backoff: sleep longer on successive retries
+                    # Jitter: add random delay so concurrent tasks retry at different times
+                    backoff_delay = RETRY_BACKOFF_SECS * (2 ** (attempt - 1))
+                    jitter = random.uniform(0.5, 1.5)
+                    sleep_time = backoff_delay + jitter
+                    logger.info("Retrying in %.2fs...", sleep_time)
+                    await asyncio.sleep(sleep_time)
 
         raise APIConnectionError(
             f"All {self.max_retries} LLM attempts failed. Last: {last_exc}"
@@ -597,9 +604,16 @@ class TimetableExtractor:
     # ------------------------------------------------------------------ #
 
     async def _extract_all_chunks(self, chunks: List[str]) -> Dict[str, Any]:
-        """Fire all chunk extractions concurrently and merge."""
+        """Fire all chunk extractions concurrently (throttled) and merge."""
+        # Limit to 1 active concurrent chunk extraction at a time to prevent HTTP 429
+        sem = asyncio.Semaphore(1)
+
+        async def sem_extract(client: httpx.AsyncClient, chunk: str, idx: int):
+            async with sem:
+                return await self._extract_chunk(client, chunk, idx)
+
         async with httpx.AsyncClient() as client:
-            tasks   = [self._extract_chunk(client, c, i) for i, c in enumerate(chunks, 1)]
+            tasks   = [sem_extract(client, c, i) for i, c in enumerate(chunks, 1)]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
         successful: List[Dict[str, Any]] = []

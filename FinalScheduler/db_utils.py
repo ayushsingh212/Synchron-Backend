@@ -1,16 +1,18 @@
 import os
 import logging
+from pathlib import Path
 from pymongo import MongoClient
 from bson import ObjectId
 from dotenv import load_dotenv
 from typing import Optional, Dict, Any
 # Note: You might need to install python-dotenv: pip install python-dotenv
 
-load_dotenv()
+# Use absolute path so .env is always found regardless of where Uvicorn is launched from
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 logger = logging.getLogger(__name__)
 
 # Configuration
-MONGO_URI = os.getenv("MONGO_URL")
+MONGO_URI = os.getenv("MONGO_URL") or os.getenv("MONGODB_URL")
 DB_NAME = os.getenv("MONGO_DB_NAME", "SYNCHRON")
 COLLECTION_NAME = "organisationdatas"
 
@@ -31,7 +33,7 @@ try:
         config_collection = db[COLLECTION_NAME]
         logger.info("Connected to MongoDB successfully")
     else:
-        logger.error("MONGO_URL environment variable is not set. Database connection skipped.")
+        logger.error("Neither MONGO_URL nor MONGODB_URL environment variable is set. Database connection skipped.")
 except Exception as e:
     # Use logger for consistency instead of print
     logger.error(f"Failed to connect to MongoDB at {MONGO_URI}: {e}")

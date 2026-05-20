@@ -14,7 +14,7 @@ export const downloadAllSectionTimetables = async (req, res) => {
 
     if (!docs || docs.length === 0) {
       console.log("No timetables in DB. Fetching from API...");
-      const FLASK_URL = "http://127.0.0.1:5000";
+      const FLASK_URL = "http://127.0.0.1:8000";
       const apiResp = await axios.get(`${FLASK_URL}/api/timetables/sections`);
       const sectionsObj = apiResp?.data;
 

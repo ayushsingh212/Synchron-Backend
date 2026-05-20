@@ -131,44 +131,91 @@ class NLPRequest(BaseModel):
     organisation_id: Optional[str] = Field(None, description="The MongoDB ObjectId of the Organisation")
 
 # =============================================================================
-# ULTRA-FAST LLM EXTRACTOR SETUP WITH CEREBRAS + GEMINI FALLBACK
+# ULTRA-FAST LLM EXTRACTOR SETUP WITH CEREBRAS + GEMINI DYNAMIC FALLBACK
 # =============================================================================
 
-# Initialize LLM-based timetable extractor with priority order
-llm_extractor = None
+# Both extractors are initialized independently at startup.
+# This allows runtime fallback: if Cerebras returns 429 mid-session,
+# the request is automatically retried with Gemini without crashing.
+from timetable_extractor import TimetableExtractor
+
+cerebras_extractor = None
+groq_extractor = None
+gemini_extractor = None
 USE_CEREBRAS = False
 
-# Try Cerebras first (ultra-fast)
+# 1. Initialize Cerebras (Primary - ultra-fast)
 try:
-    from timetable_extractor import TimetableExtractor
     CEREBRAS_API_KEY = os.getenv('CEREBRAS_API_KEY')
-    
     if CEREBRAS_API_KEY:
-        llm_extractor = TimetableExtractor(CEREBRAS_API_KEY)
-        USE_CEREBRAS = True
-        logger.info("Using Cerebras for ultra-fast extraction")
+        cerebras_extractor = TimetableExtractor(CEREBRAS_API_KEY)
+        if getattr(cerebras_extractor, 'is_connected', False):
+            USE_CEREBRAS = True
+            logger.info("Cerebras extractor ready (primary)")
+        else:
+            logger.warning("Cerebras startup ping failed (likely 429). Keeping it active for runtime retries.")
+            # We DO NOT set cerebras_extractor = None here anymore!
+            # A rate limit is temporary. We want the runtime router to keep trying it.
     else:
-        logger.warning("Cerebras API key not available")
-except ImportError:
-    logger.info("Cerebras extractor not available, trying Gemini")
+        logger.warning("CEREBRAS_API_KEY not set - Cerebras disabled")
 except Exception as e:
     logger.warning(f"Cerebras initialization failed: {e}")
+    cerebras_extractor = None
 
-# Fallback to Gemini if Cerebras not available
-if not llm_extractor:
-    try:
-        from timetable_extractor_gemini import TimetableExtractor
-        GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
-        
-        if GEMINI_API_KEY:
-            llm_extractor = TimetableExtractor(GEMINI_API_KEY)
-            logger.info("Gemini LLM extractor initialized successfully")
-            print("Using Gemini LLM extraction as fallback")
+# 2. Initialize Groq (Secondary - ultra-fast)
+try:
+    GROQ_API_KEY = os.getenv('GROQ_API_KEY')
+    if GROQ_API_KEY:
+        groq_extractor = TimetableExtractor(
+            cerebras_api_key=GROQ_API_KEY,
+            endpoint_url="https://api.groq.com/openai/v1/chat/completions",
+            model="llama-3.1-8b-instant"
+        )
+        if getattr(groq_extractor, 'is_connected', False):
+            logger.info("Groq extractor ready (secondary)")
         else:
-            logger.warning("Gemini API key not available - LLM extraction disabled")
-    except Exception as e:
-        logger.error(f"Failed to initialize Gemini extractor: {e}")
-        llm_extractor = None
+            logger.warning("Groq startup ping failed (likely 429). Keeping it active for runtime retries.")
+            # DO NOT set groq_extractor = None. Keep it active for the router!
+    else:
+        logger.warning("GROQ_API_KEY not set - Groq disabled")
+except Exception as e:
+    logger.warning(f"Groq initialization failed: {e}")
+    groq_extractor = None
+
+# 3. Initialize Gemini (Tertiary - highly reliable fallback)
+try:
+    GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+    if GEMINI_API_KEY:
+        gemini_extractor = TimetableExtractor(
+            cerebras_api_key=GEMINI_API_KEY,
+            endpoint_url="https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+            model="gemini-2.0-flash"
+        )
+        logger.info("Gemini extractor ready (fallback)")
+    else:
+        logger.warning("GEMINI_API_KEY not set - Gemini disabled")
+except Exception as e:
+    logger.warning(f"Gemini initialization failed: {e}")
+    gemini_extractor = None
+
+# Keep llm_extractor as a single reference for backward compatibility
+# (used by health check, status endpoints, etc.)
+llm_extractor = cerebras_extractor or gemini_extractor
+
+def get_extractor_with_fallback():
+    """
+    Returns extractors in priority order: [Cerebras, Groq, Gemini]
+    The parse endpoint iterates this list and uses the first one that succeeds.
+    If Cerebras/Groq return 429 mid-session, it automatically shifts to the next.
+    """
+    extractors = []
+    if cerebras_extractor is not None:
+        extractors.append(("Cerebras", cerebras_extractor))
+    if groq_extractor is not None:
+        extractors.append(("Groq", groq_extractor))
+    if gemini_extractor is not None:
+        extractors.append(("Gemini", gemini_extractor))
+    return extractors
 
 # Import timetable modules
 try:
@@ -399,79 +446,91 @@ async def parse_timetable(
     session: Optional[str] = Form(None)
 ):
     """
-    Parse uploaded PDF/Excel timetable file using ultra-fast LLM
-    
+    Parse uploaded PDF/Excel timetable file using LLM with dynamic runtime fallback.
+    Tries Cerebras first (ultra-fast). If it fails with 429 or any error,
+    automatically falls back to Gemini without crashing the request.
+
     - **file**: PDF, XLSX, XLS, or XLSM file
     - **college_name**: Optional college name
     - **session**: Optional session info
     """
-    if not llm_extractor:
+    # Get extractors in priority order [Cerebras, Gemini]
+    extractors = get_extractor_with_fallback()
+
+    if not extractors:
         raise HTTPException(
             status_code=503,
-            detail='LLM extractor is not available. Please check your API key setup.'
+            detail='No LLM extractors are available. Please check CEREBRAS_API_KEY and GEMINI_API_KEY.'
         )
-    
-    try:
-        # Validate file
-        if not allowed_file(file.filename):
-            raise HTTPException(
-                status_code=400,
-                detail='Invalid file format. Allowed: PDF, XLSX, XLS, XLSM, JSON'
-            )
-        
-        # Read file content
-        file_content = await file.read()
-        
-        # Check file size
-        if len(file_content) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail='File too large. Maximum size is 50MB.'
-            )
-        
-        filename = file.filename
-        extraction_method = "Cerebras (ultra-fast)" if USE_CEREBRAS else "Gemini"
-        logger.info(f"Starting {extraction_method} parsing for file: {filename}")
-        
-        # Extract timetable data using ultra-fast LLM
-        start_time = datetime.now()
-        result = llm_extractor.extract_timetable_data(
-            file_content=file_content,
-            filename=filename,
-            college_name=college_name,
-            session=session
+
+    # Validate file format
+    if not allowed_file(file.filename):
+        raise HTTPException(
+            status_code=400,
+            detail='Invalid file format. Allowed: PDF, XLSX, XLS, XLSM, JSON'
         )
-        end_time = datetime.now()
-        extraction_time = (end_time - start_time).total_seconds()
-        
-        # Store parsed config for later use
-        timetable_results["parsed_config"] = result
-        
-        success_message = f"Timetable parsed successfully using {extraction_method}"
-        if USE_CEREBRAS:
-            success_message += f" in {extraction_time:.2f}s (ultra-fast!)"
-        
-        logger.info("Timetable parsing completed successfully")
-        
-        return {
-            'success': True,
-            'message': success_message,
-            'data': result,
-            'extraction_info': {
-                **result.get('extraction_info', {}),
-                'llm_backend': 'Cerebras' if USE_CEREBRAS else 'Gemini',
-                'extraction_time_seconds': extraction_time
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Timetable parsing failed: {str(e)}")
+
+    # Read file content once (before the fallback loop)
+    file_content = await file.read()
+
+    if len(file_content) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail='File too large. Maximum size is 50MB.'
+        )
+
+    filename = file.filename
+    result = None
+    used_backend = None
+    start_time = datetime.now()
+
+    # -------------------------------------------------------------------------
+    # RUNTIME FALLBACK LOOP
+    # Try each extractor in order. On any failure (429, timeout, etc.),
+    # log the error and move to the next provider transparently.
+    # -------------------------------------------------------------------------
+    for backend_name, extractor in extractors:
+        try:
+            logger.info(f"Attempting extraction using {backend_name}...")
+            result = extractor.extract_timetable_data(
+                file_content=file_content,
+                filename=filename,
+                college_name=college_name,
+                session=session
+            )
+            used_backend = backend_name
+            logger.info(f"Extraction succeeded using {backend_name}")
+            break  # Success — stop trying other providers
+        except HTTPException:
+            raise  # Re-raise FastAPI HTTP errors directly
+        except Exception as e:
+            logger.warning(f"{backend_name} extraction failed: {e}. Trying next provider...")
+            continue  # Move to the next provider
+
+    # If all providers failed, return a meaningful error
+    if result is None:
         raise HTTPException(
             status_code=500,
-            detail=f'Failed to parse timetable: {str(e)}'
+            detail='All LLM backends (Cerebras + Gemini) failed to parse the timetable. Please try again later.'
         )
+
+    extraction_time = (datetime.now() - start_time).total_seconds()
+
+    # Store parsed config for later use by generate endpoints
+    timetable_results["parsed_config"] = result
+
+    logger.info(f"Timetable parsing completed via {used_backend} in {extraction_time:.2f}s")
+
+    return {
+        'success': True,
+        'message': f"Timetable parsed successfully using {used_backend} in {extraction_time:.2f}s",
+        'data': result,
+        'extraction_info': {
+            **result.get('extraction_info', {}),
+            'llm_backend': used_backend,
+            'extraction_time_seconds': extraction_time
+        }
+    }
 
 
 @app.post("/api/nlp/parse", status_code=200)
