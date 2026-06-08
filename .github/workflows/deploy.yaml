@@ -32,7 +32,10 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
           ENV_FILE: ${{ secrets.ENV_FILE }}
 
-        run: |
+          # ── Test Connection ─────────────────────────────────────────────
+          echo "Testing connection to EC2..."
+          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST "echo 'SSH Connection successful!'"
+
           # ── Write deploy key on runner, copy to EC2, then delete ────────
           echo "$DEPLOY_KEY" > deploy_key.pem
           chmod 600 deploy_key.pem
