@@ -31,7 +31,7 @@ jobs:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
           ENV_FILE: ${{ secrets.ENV_FILE }}
-
+        run: |
           # ── Test Connection ─────────────────────────────────────────────
           echo "Testing connection to EC2..."
           ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "echo 'SSH Connection successful!'"
