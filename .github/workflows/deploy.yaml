@@ -32,18 +32,16 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          # ── Write .env locally, copy to EC2, then delete ────────────────
+          # ── Transfer .env via SSH pipe ──────────────────────────────────
           printf '%s' "$ENV_FILE" > app.env
           chmod 600 app.env
 
-          echo "Copying .env to EC2..."
-          scp -o StrictHostKeyChecking=no \
-            app.env \
-            ubuntu@$EC2_HOST:/home/ubuntu/app.env
-
+          echo "Transferring .env to EC2..."
+          cat app.env | ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST 'cat > /home/ubuntu/app.env'
+          
           rm -f app.env
 
-          echo "Connecting to EC2..."
+          echo "Connecting to EC2 to start deploy..."
 
           ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << 'ENDSSH'
 
