@@ -34,7 +34,7 @@ jobs:
 
           # ── Test Connection ─────────────────────────────────────────────
           echo "Testing connection to EC2..."
-          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST "echo 'SSH Connection successful!'"
+          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "echo 'SSH Connection successful!'"
 
           # ── Write deploy key on runner, copy to EC2, then delete ────────
           echo "$DEPLOY_KEY" > deploy_key.pem
@@ -43,7 +43,7 @@ jobs:
           echo "Copying deploy key to EC2..."
           scp -o StrictHostKeyChecking=no \
             deploy_key.pem \
-            ec2-user@$EC2_HOST:/home/ec2-user/.ssh/deploy_key.pem
+            ubuntu@$EC2_HOST:/home/ubuntu/.ssh/deploy_key.pem
 
           rm -f deploy_key.pem
 
@@ -55,19 +55,19 @@ jobs:
           echo "Copying .env to EC2..."
           scp -o StrictHostKeyChecking=no \
             app.env \
-            ec2-user@$EC2_HOST:/home/ec2-user/app.env
+            ubuntu@$EC2_HOST:/home/ubuntu/app.env
 
           rm -f app.env
 
           echo "Connecting to EC2..."
 
           # ── Unquoted ENDSSH so $GITHUB_SHA expands on the runner side ───
-          ssh -o StrictHostKeyChecking=no ec2-user@$EC2_HOST << ENDSSH
+          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << ENDSSH
 
             set -euo pipefail    # FIX: -u catches unbound variables too
 
             DEPLOY_SHA="${{ github.sha }}"
-            APP_DIR="/home/ec2-user/Synchron-Backend"
+            APP_DIR="/home/ubuntu/Synchron-Backend"
 
             echo "=== Deploy \$DEPLOY_SHA ==="
 
@@ -97,7 +97,7 @@ jobs:
             git clean -fd
 
             # ── Write .env (already copied via scp) ─────────────────────────
-            mv /home/ec2-user/app.env .env
+            mv /home/ubuntu/app.env .env
             chmod 600 .env
             echo ".env written: \$(wc -l < .env) lines"
 
