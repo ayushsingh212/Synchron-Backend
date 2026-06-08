@@ -18,10 +18,17 @@ app.set("trust proxy", 1);
 fs.mkdirSync("public/temp", { recursive: true });
 fs.mkdirSync("public/uploads", { recursive: true });
 
-const {FRONTEND_URL,FRONTEND_URL2,BACKEND_URL} = process.env;
+const {FRONTEND_URL, FRONTEND_URL2} = process.env;
+
+const allowedOrigins = [
+  FRONTEND_URL,
+  FRONTEND_URL2,
+  "http://localhost:5173",
+  "http://localhost:3000"
+].filter(Boolean);
 
 const corsOptions = {
-  origin: [FRONTEND_URL, FRONTEND_URL2, "http://localhost:5173"],
+  origin: allowedOrigins,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,

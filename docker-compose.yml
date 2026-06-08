@@ -9,13 +9,19 @@ services:
     env_file:
       - ./.env
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - final-network
     volumes:
       - ./FinalScheduler:/app
     command: uvicorn app:app --host 0.0.0.0 --port 8000 --reload
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
@@ -30,8 +36,12 @@ services:
       - "8080:8080"
     env_file:
       - .env
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - FLASK_URL=http://finalscheduler:8000
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     networks:
       - final-network
     volumes:
@@ -39,6 +49,11 @@ services:
       - /app/node_modules       
     command: npm start            
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     deploy:
       resources:
         limits:
