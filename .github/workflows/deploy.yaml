@@ -32,23 +32,7 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
           ENV_FILE: ${{ secrets.ENV_FILE }}
         run: |
-          # ── Test Connection ─────────────────────────────────────────────
-          echo "Testing connection to EC2..."
-          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST "echo 'SSH Connection successful!'"
-
-          # ── Write deploy key on runner, copy to EC2, then delete ────────
-          echo "$DEPLOY_KEY" > deploy_key.pem
-          chmod 600 deploy_key.pem
-
-          echo "Copying deploy key to EC2..."
-          scp -o StrictHostKeyChecking=no \
-            deploy_key.pem \
-            ubuntu@$EC2_HOST:/home/ubuntu/.ssh/deploy_key.pem
-
-          rm -f deploy_key.pem
-
           # ── Write .env locally, copy to EC2, then delete ────────────────
-          # FIX: printf avoids adding a trailing newline that echo adds
           printf '%s' "$ENV_FILE" > app.env
           chmod 600 app.env
 
@@ -61,101 +45,85 @@ jobs:
 
           echo "Connecting to EC2..."
 
-          # ── Unquoted ENDSSH so $GITHUB_SHA expands on the runner side ───
-          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << ENDSSH
+          ssh -o StrictHostKeyChecking=no ubuntu@$EC2_HOST << 'ENDSSH'
 
-            set -euo pipefail    # FIX: -u catches unbound variables too
+            set -euo pipefail
 
             DEPLOY_SHA="${{ github.sha }}"
             APP_DIR="/home/ubuntu/Synchron-Backend"
 
-            echo "=== Deploy \$DEPLOY_SHA ==="
+            echo "=== Deploy $DEPLOY_SHA ==="
 
-            # ── SSH / deploy key setup ──────────────────────────────────────
+            # ── GitHub SSH setup (Uses the server's default SSH key) ────────
             mkdir -p ~/.ssh
             chmod 700 ~/.ssh
-            chmod 600 ~/.ssh/deploy_key.pem
-
-            # FIX: deduplicate known_hosts so it doesn't grow on every deploy
             ssh-keyscan -H github.com 2>/dev/null >> ~/.ssh/known_hosts
             sort -u ~/.ssh/known_hosts -o ~/.ssh/known_hosts
 
-            eval \$(ssh-agent -s)
-            ssh-add ~/.ssh/deploy_key.pem
-
             # ── Clone or pull ────────────────────────────────────────────────
-            if [ ! -d "\$APP_DIR" ]; then
+            if [ ! -d "$APP_DIR" ]; then
               echo "First deploy — cloning..."
-              git clone git@github.com:ayushsingh212/Synchron-Backend.git "\$APP_DIR"
+              # Note: This requires the server's public key to be in GitHub Deploy Keys
+              git clone git@github.com:ayushsingh212/Synchron-Backend.git "$APP_DIR"
             fi
 
-            cd "\$APP_DIR"
+            cd "$APP_DIR"
 
             echo "Pulling latest code..."
             git fetch origin
-            git reset --hard origin/master    # FIX: safer than git pull
+            git reset --hard origin/master
             git clean -fd
 
             # ── Write .env (already copied via scp) ─────────────────────────
             mv /home/ubuntu/app.env .env
             chmod 600 .env
-            echo ".env written: \$(wc -l < .env) lines"
+            echo ".env written: $(wc -l < .env) lines"
 
-            # ── Stop running containers first ───────────────────────────────
+            # ── Stop and Cleanup ───────────────────────────────
             echo "Stopping existing containers..."
             docker compose down --remove-orphans --timeout 30 || true
 
-            # ── Full Docker cleanup to free disk space ───────────────────────
-            # Order matters: containers must be stopped before pruning volumes
+            echo "Full Docker cleanup..."
+            docker system prune -af --volumes || true
 
-            echo "Removing stopped containers..."
-            docker container prune -f || true
-
-            echo "Removing all unused images..."
-            docker image prune -af || true      # -a removes ALL unused, not just dangling
-
-            echo "Removing unused volumes..."
-            docker volume prune -f || true      # safe now — containers are stopped
-
-            echo "Clearing build cache..."
-            docker builder prune -af || true
-
-            echo "Final system prune..."
-            docker system prune -af || true
-
-            echo "=== Disk space after cleanup ==="
-            df -h /
-
-            # ── Build fresh ─────────────────────────────────────────────────
+            # ── Build and Start ───────────────────────────────────────────────
             echo "Building images..."
-            docker compose build --no-cache --pull    # --pull refreshes base images
+            docker compose build --no-cache --pull
 
             echo "Starting containers..."
             docker compose up -d --force-recreate
 
-            # ── Health check — poll instead of blind sleep ───────────────────
+            # ── Health check ──────────────────────────────────────────────────
             echo "Waiting for containers to become healthy..."
             MAX_WAIT=120
             ELAPSED=0
-            INTERVAL=5
-
-            while [ \$ELAPSED -lt \$MAX_WAIT ]; do
-              # Any container in unhealthy state = fail fast
-              UNHEALTHY=\$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
-              if [ -n "\$UNHEALTHY" ]; then
-                echo "UNHEALTHY containers: \$UNHEALTHY"
+            while [ $ELAPSED -lt $MAX_WAIT ]; do
+              # Check for unhealthy containers
+              UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}")
+              if [ -n "$UNHEALTHY" ]; then
+                echo "UNHEALTHY containers: $UNHEALTHY"
                 docker compose logs --tail=80
                 exit 1
               fi
 
-              STARTING=\$(docker ps --filter "health=starting" --format "{{.Names}}")
-              if [ -z "\$STARTING" ]; then
-                echo "All containers healthy after \${ELAPSED}s"
+              # Check if any are still starting
+              STARTING=$(docker ps --filter "health=starting" --format "{{.Names}}")
+              if [ -z "$STARTING" ]; then
+                echo "All containers healthy after ${ELAPSED}s"
                 break
               fi
 
-              echo "Still starting (\${ELAPSED}/\${MAX_WAIT}s): \$STARTING"
-              sleep \$INTERVAL
+              sleep 5
+              ELAPSED=$((ELAPSED + 5))
+            done
+
+            # ── Final status ────────────────────────────────────────────────
+            echo "=== Running containers ==="
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+            echo "=== Deploy $DEPLOY_SHA complete ==="
+
+          ENDSSH
+ep \$INTERVAL
               ELAPSED=\$((ELAPSED + INTERVAL))
             done
 
