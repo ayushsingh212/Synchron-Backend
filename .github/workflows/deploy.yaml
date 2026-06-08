@@ -123,23 +123,3 @@ jobs:
             echo "=== Deploy $DEPLOY_SHA complete ==="
 
           ENDSSH
-ep \$INTERVAL
-              ELAPSED=\$((ELAPSED + INTERVAL))
-            done
-
-            if [ \$ELAPSED -ge \$MAX_WAIT ]; then
-              echo "ERROR: containers did not start within \${MAX_WAIT}s"
-              docker compose logs --tail=100
-              exit 1
-            fi
-
-            # ── Final status ────────────────────────────────────────────────
-            echo "=== Running containers ==="
-            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-            echo "=== Recent logs ==="
-            docker compose logs --tail=30
-
-            echo "=== Deploy \$DEPLOY_SHA complete ==="
-
-          ENDSSH
